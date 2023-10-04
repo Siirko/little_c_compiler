@@ -1,7 +1,8 @@
+#include "../include/hashmap.h"
 #include <stdio.h>
 
 int main(int argc, char const *argv[])
 {
-    puts("Hello, world!");
+    puts("Hello, World!");
     return 0;
 }

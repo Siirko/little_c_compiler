@@ -1,0 +1,8 @@
+{
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp": "Formatting",
+    "files.associations": {
+        "*.yml": "jinja-yaml",
+        "hashmap.h": "c"
+    },
+}
