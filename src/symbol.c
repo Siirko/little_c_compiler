@@ -6,19 +6,15 @@
 void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *data_type, char *yytext,
                 int *counter)
 {
-    symbol_t *symbol = calloc(1, sizeof(struct symbol));
-    symbol->type = type;
-    symbol->data_type = type == TYPE_KEYWORD ? TYPE_NAD : *data_type;
-    symbol->id = strdup(yytext);
-    symbol->line = *counter;
+    symbol_t symbol = {
+        .type = type,
+        .data_type = type == TYPE_KEYWORD ? TYPE_NAD : *data_type,
+        .line = *counter,
+    };
+    memcpy(symbol.id, yytext, strlen(yytext) + 1);
 
     if (hashmap_get(symbol_table, yytext) == NULL)
-    {
-        // size_t len = strlen(yytext);
-        // char snu[10 + len];
-        // sprintf(snu, "%s_%d", yytext, *counter);
-        hashmap_insert(symbol_table, yytext, symbol, sizeof(struct symbol));
-    }
+        hashmap_insert(symbol_table, yytext, &symbol, sizeof(struct symbol));
 }
 
 void show_symbol(char *id, void *symbol)

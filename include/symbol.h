@@ -32,7 +32,7 @@ static const char *data_type_str[] = {DATA_TYPE_MAP};
 
 typedef struct symbol
 {
-    char *id;
+    char id[1024];
     enum symbol_type type;
     enum data_type data_type;
     int line;
