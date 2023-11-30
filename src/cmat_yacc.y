@@ -80,6 +80,9 @@ statement: datatype ID {
     ;
 
 init: '=' value
+    | ',' ID { 
+        add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, &counter); 
+    } init
     |
     ;
 
