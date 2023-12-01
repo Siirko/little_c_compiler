@@ -39,7 +39,7 @@ typedef struct symbol
 } symbol_t;
 
 void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *data_type, char *yytext,
-                int *counter);
+                int counter);
 
 void show_symbol(char *id, void *symbol);
 

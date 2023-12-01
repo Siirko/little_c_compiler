@@ -11,37 +11,37 @@ unary "++"|"--"
 
 %%
 
-"printf"                    { return PRINTFF; }
-"int"                       { return INT; }
-"float"                     { return FLOAT; }
+"printf"                    { strncpy(yylval.node_t.name, yytext, 1024); return PRINTFF; }
+"int"                       { strncpy(yylval.node_t.name, yytext, 1024); return INT; }
+"float"                     { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT; }
 
-"return"                    { return RETURN; }
-"for"	                    { return FOR; }
-"if"	                    { return IF; }
-"else"	                    { return ELSE; }
+"return"                    { strncpy(yylval.node_t.name, yytext, 1024); return RETURN; }
+"for"	                    { strncpy(yylval.node_t.name, yytext, 1024); return FOR; }
+"if"	                    { strncpy(yylval.node_t.name, yytext, 1024); return IF; }
+"else"	                    { strncpy(yylval.node_t.name, yytext, 1024); return ELSE; }
 
-[-]?{digit}+                { return NUMBER; }
-[-]?{digit}+\.{digit}{1,6}  { return FLOAT_NUM; }
-{alpha}({alpha}|{digit})*   { return ID; }
-{unary}                     { return UNARY; }
+[-]?{digit}+                { strncpy(yylval.node_t.name, yytext, 1024); return NUMBER; }
+[-]?{digit}+\.{digit}{1,6}  { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT_NUM; }
+{alpha}({alpha}|{digit})*   { strncpy(yylval.node_t.name, yytext, 1024); return ID; }
+{unary}                     { strncpy(yylval.node_t.name, yytext, 1024); return UNARY; }
 
-"<="                        { return LE; }
-">="                        { return GE; }
-"=="                        { return EQ; }
-"!="                        { return NE; }
-">"	                    { return GT; }
-"<"	                    { return LT; }
-"+"                         { return ADD; }
-"-"                         { return SUBTRACT; }
-"/"                         { return DIVIDE; }
-"*"                         { return MULTIPLY; }
+"<="                        { strncpy(yylval.node_t.name, yytext, 1024); return LE; }
+">="                        { strncpy(yylval.node_t.name, yytext, 1024); return GE; }
+"=="                        { strncpy(yylval.node_t.name, yytext, 1024); return EQ; }
+"!="                        { strncpy(yylval.node_t.name, yytext, 1024); return NE; }
+">"	                    { strncpy(yylval.node_t.name, yytext, 1024); return GT; }
+"<"	                    { strncpy(yylval.node_t.name, yytext, 1024); return LT; }
+"+"                         { strncpy(yylval.node_t.name, yytext, 1024); return ADD; }
+"-"                         { strncpy(yylval.node_t.name, yytext, 1024); return SUBTRACT; }
+"/"                         { strncpy(yylval.node_t.name, yytext, 1024); return DIVIDE; }
+"*"                         { strncpy(yylval.node_t.name, yytext, 1024); return MULTIPLY; }
 
 \/\/.*                      { ; }
 \/\*(.*\n)*.*\*\/           { ; } 
 [ \t]*                      { ; }
 [\n]                        { counter++; }
 .	                    { return *yytext; }
-["].*["]                    { return STR; }
+["].*["]                    { strncpy(yylval.node_t.name, yytext, 1024); return STR; }
 
 
 %%

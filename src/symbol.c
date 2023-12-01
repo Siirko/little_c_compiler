@@ -4,12 +4,12 @@
 #include <string.h>
 
 void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *data_type, char *yytext,
-                int *counter)
+                int counter)
 {
     symbol_t symbol = {
         .type = type,
         .data_type = type == TYPE_KEYWORD ? TYPE_NAD : *data_type,
-        .line = *counter,
+        .line = counter,
     };
     memcpy(symbol.id, yytext, strlen(yytext) + 1);
 
