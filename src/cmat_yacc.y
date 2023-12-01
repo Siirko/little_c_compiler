@@ -127,7 +127,9 @@ printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, y
     }
     ;
 
-condition: value relop value 
+condition: value relop value {
+        $$.node = ast_new($2.name, $1.node, $3.node);
+    }
     ;
 
 
