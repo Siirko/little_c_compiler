@@ -4,6 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct trunks
+{
+    struct trunks *prev;
+    char *str;
+} trunks_t;
+
+void trunks_show(trunks_t *p)
+{
+    if (p == NULL)
+        return;
+    trunks_show(p->prev);
+    printf("%s", p->str);
+}
+
 ast_t *ast_new(char *token, ast_t *left, ast_t *right)
 {
     ast_t *ast = calloc(sizeof(ast_t), 1);
@@ -30,20 +44,6 @@ void print_spaces(int n)
     }
 }
 
-typedef struct trunks
-{
-    struct trunks *prev;
-    char *str;
-} trunks_t;
-
-void trunks_show(trunks_t *p)
-{
-    if (p == NULL)
-        return;
-    trunks_show(p->prev);
-    printf("%s", p->str);
-}
-
 void ast_show_helper(ast_t *ast, trunks_t *prev, bool is_left)
 {
     if (ast == NULL)
@@ -55,7 +55,7 @@ void ast_show_helper(ast_t *ast, trunks_t *prev, bool is_left)
         .str = prev_str,
     };
 
-    ast_show_helper(ast->left, &trunk, true);
+    ast_show_helper(ast->right, &trunk, true);
 
     if (!prev)
         trunk.str = "---";
@@ -77,7 +77,7 @@ void ast_show_helper(ast_t *ast, trunks_t *prev, bool is_left)
         prev->str = prev_str;
     trunk.str = "   |";
 
-    ast_show_helper(ast->right, &trunk, false);
+    ast_show_helper(ast->left, &trunk, false);
 }
 
 void ast_show(ast_t *ast) { ast_show_helper(ast, NULL, false); }

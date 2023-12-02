@@ -132,7 +132,6 @@ condition: value relop value {
     }
     ;
 
-
 expression: expression operation expression {
         $$.node = ast_new($2.name, $1.node, $3.node);
     }
@@ -166,7 +165,7 @@ value: NUMBER {
 
 return: RETURN { 
         add_symbol(symbol_table,TYPE_KEYWORD, &data_type, yytext, counter); 
-    } value ';' {
+    } expression ';' {
         $1.node = ast_new("return", NULL, NULL);
         $$.node = ast_new("RETURN", $1.node, $3.node);
     } 
