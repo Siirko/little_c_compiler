@@ -1,8 +1,9 @@
 #pragma once
 
+#define AST_TOKEN_SIZE 1024
 typedef struct ast
 {
-    char token[1024];
+    char token[AST_TOKEN_SIZE];
     struct ast *left;
     struct ast *right;
 } ast_t;

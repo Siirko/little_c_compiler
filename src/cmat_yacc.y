@@ -11,11 +11,15 @@
     int yylex();
     int yywrap();
     extern char* yytext;
+    extern int yylineno;
+
+    void check_variable_declaration(char* token);
 
     ast_t *head;
     hashmap_t* symbol_table;
     enum data_type data_type;
     extern int counter;
+    int error_count = 0;
 %}
 
 %union {
@@ -89,20 +93,21 @@ statement: datatype ID {
         $2.node = ast_new($2.name, NULL, NULL);
         $$.node = ast_new("declaration", $2.node, $4.node);
     }
-    | ID '=' expression {
+    | ID { check_variable_declaration($1.name); } '=' expression {
         $1.node = ast_new($1.name, NULL, NULL);
-        $$.node = ast_new("=", $1.node, $3.node);
+        $$.node = ast_new("=", $1.node, $4.node);
     }
-    | ID relop expression {
+    | ID { check_variable_declaration($1.name); } relop expression {
         $1.node = ast_new($1.name, NULL, NULL);
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($3.name, $1.node, $4.node);
     }
-    | ID UNARY {
+    | ID { check_variable_declaration($1.name); } UNARY {
         $1.node = ast_new($1.name, NULL, NULL);
-        $2.node = ast_new($2.name, NULL, NULL);
-        $$.node = ast_new("ITERATOR", $1.node, $2.node);
+        $3.node = ast_new($3.name, NULL, NULL);
+        $$.node = ast_new("ITERATOR", $1.node, $3.node);
     }
-    | UNARY ID {
+    | UNARY ID  {
+        check_variable_declaration($2.name);
         $1.node = ast_new($1.name, NULL, NULL);
         $2.node = ast_new($2.name, NULL, NULL);
         $$.node = ast_new("ITERATOR", $1.node, $2.node);
@@ -160,7 +165,10 @@ value: NUMBER {
         add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
         $$.node = ast_new($1.name, NULL, NULL);
     }
-    | ID { $$.node = ast_new($1.name, NULL, NULL); }
+    | ID { 
+        check_variable_declaration($1.name);
+        $$.node = ast_new($1.name, NULL, NULL);
+     }
     ;
 
 return: RETURN { 
@@ -174,6 +182,14 @@ return: RETURN {
 
 %%
 
+void check_variable_declaration(char* token) {
+    if(hashmap_get(symbol_table, token) == NULL)
+    {
+        fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
+        error_count++;
+    }
+}
+
 void yyerror(const char* msg) {
-    fprintf(stderr, "%s\n", msg);
+  fprintf(stderr, "%s: '%s' in line %d\n", msg, yytext, yylineno);
 }
