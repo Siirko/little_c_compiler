@@ -30,7 +30,9 @@
 }
 
 %token <node_t>  PRINTFF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> printf_statement operation main body return datatype expression statement init value relop program condition else body_element for_statement if_statement
+%type <node_t> printf_statement main body return datatype expression statement init value relop program condition else body_element for_statement if_statement
+
+%left ADD SUBTRACT MULTIPLY DIVIDE
 
 %%
 
@@ -114,7 +116,7 @@ statement: datatype ID {
     }
     ;
 
-init: '=' value {
+init: '=' expression {
         $$.node = $2.node;
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
@@ -137,18 +139,6 @@ condition: value relop value {
     }
     ;
 
-expression: expression operation expression {
-        $$.node = ast_new($2.name, $1.node, $3.node);
-    }
-    | value { $$.node = $1.node; }
-    ;
-
-operation: ADD
-    | MULTIPLY
-    | DIVIDE
-    | SUBTRACT
-    ;
-
 relop: LT
     | GT
     | LE
@@ -156,6 +146,23 @@ relop: LT
     | EQ
     | NE
     ;
+
+expression: expression ADD expression {
+        $$.node = ast_new($2.name, $1.node, $3.node);
+    }
+    | expression SUBTRACT expression {
+        $$.node = ast_new($2.name, $1.node, $3.node);
+    }
+    | expression MULTIPLY expression {
+        $$.node = ast_new($2.name, $1.node, $3.node);
+    }
+    | expression DIVIDE expression {
+        $$.node = ast_new($2.name, $1.node, $3.node);
+    }
+    | value { $$.node = $1.node; }
+    ;
+
+
 
 value: NUMBER { 
         add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
