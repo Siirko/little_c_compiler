@@ -1,4 +1,5 @@
 #include "../include/ast.h"
+#include "../include/utils.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@ void trunks_show(trunks_t *p)
 ast_t *ast_new(char *token, ast_t *left, ast_t *right)
 {
     ast_t *ast = calloc(sizeof(ast_t), 1);
+    CHK_NULL(ast);
     strncpy(ast->token, token, 1024);
     ast->left = left;
     ast->right = right;
@@ -39,9 +41,7 @@ void ast_free(ast_t *ast)
 void print_spaces(int n)
 {
     for (int i = 0; i < n; i++)
-    {
         printf(" ");
-    }
 }
 
 void ast_show_helper(ast_t *ast, trunks_t *prev, bool is_left)
