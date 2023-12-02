@@ -37,8 +37,8 @@
 %%
 
 program: main '(' ')' '{' body return '}' {
-        $1.node = ast_new("main", $5.node, $6.node);
-        $$.node = ast_new("program", NULL, $1.node);
+        $1.node = ast_new("main", $5.node, $6.node, AST_MAIN);
+        $$.node = ast_new("program", NULL, $1.node, AST_ROOT);
         head = $$.node;
     }
     ;
@@ -55,7 +55,7 @@ datatype: INT { data_type = TYPE_INT; }
 
 
 body: body_element
-    | body body_element { $$.node = ast_new("statements", $1.node, $2.node); }
+    | body body_element { $$.node = ast_new("statements", $1.node, $2.node, AST_STATEMENTS); }
     ;
 
 
@@ -68,22 +68,22 @@ body_element: for_statement
 for_statement: FOR { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' statement ';' condition ';' statement ')' '{' body '}' {
-        ast_t *tmp = ast_new("CONDITION", $6.node, $8.node);
-        ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp);
-        $$.node = ast_new($1.name, tmp2, $11.node);
+        ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
+        ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
+        $$.node = ast_new($1.name, tmp2, $11.node, AST_FOR);
     }
 
 if_statement: IF { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' condition ')' '{' body '}' else {
-        ast_t *tmp = ast_new($1.name, $4.node, $7.node);
-        $$.node = ast_new("if-else", tmp, $9.node);
+        ast_t *tmp = ast_new($1.name, $4.node, $7.node, AST_IF);
+        $$.node = ast_new("if-else", tmp, $9.node, AST_IF_ELSE);
     }
 
 else: ELSE { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '{' body '}' {
-        $$.node = ast_new($1.name, NULL, $4.node);
+        $$.node = ast_new($1.name, NULL, $4.node, AST_ELSE);
     }
     | { $$.node = NULL; }
     ;
@@ -92,27 +92,27 @@ else: ELSE {
 statement: datatype ID { 
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } init {
-        $2.node = ast_new($2.name, NULL, NULL);
-        $$.node = ast_new("declaration", $2.node, $4.node);
+        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
+        $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
     }
     | ID { check_variable_declaration($1.name); } '=' expression {
-        $1.node = ast_new($1.name, NULL, NULL);
-        $$.node = ast_new("=", $1.node, $4.node);
+        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
+        $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
     }
     | ID { check_variable_declaration($1.name); } relop expression {
-        $1.node = ast_new($1.name, NULL, NULL);
-        $$.node = ast_new($3.name, $1.node, $4.node);
+        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
+        $$.node = ast_new($3.name, $1.node, $4.node, AST_RELOP);
     }
     | ID { check_variable_declaration($1.name); } UNARY {
-        $1.node = ast_new($1.name, NULL, NULL);
-        $3.node = ast_new($3.name, NULL, NULL);
-        $$.node = ast_new("ITERATOR", $1.node, $3.node);
+        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
+        $3.node = ast_new($3.name, NULL, NULL, AST_UNARY);
+        $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
     }
     | UNARY ID  {
         check_variable_declaration($2.name);
-        $1.node = ast_new($1.name, NULL, NULL);
-        $2.node = ast_new($2.name, NULL, NULL);
-        $$.node = ast_new("ITERATOR", $1.node, $2.node);
+        $1.node = ast_new($1.name, NULL, NULL, AST_UNARY);
+        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
+        $$.node = ast_new("ITERATOR", $1.node, $2.node, AST_ITERATOR);
     }
     ;
 
@@ -122,20 +122,20 @@ init: '=' expression {
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } init {
-        $2.node = ast_new($2.name, NULL, NULL);
-        $$.node = ast_new("declaration", $2.node, $4.node);
+        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
+        $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
     }
-    | { $$.node = ast_new("NULL", NULL, NULL); }
+    | { $$.node = ast_new("NULL", NULL, NULL, AST_NULL); }
     ;
 
 printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); } '(' STR ')' ';'
     { 
-        $$.node = ast_new("printf",NULL, NULL);
+        $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
     }
     ;
 
 condition: value relop value {
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
     }
     ;
 
@@ -148,16 +148,16 @@ relop: LT
     ;
 
 expression: expression ADD expression {
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_ADD);
     }
     | expression SUBTRACT expression {
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_SUBTRACT);
     }
     | expression MULTIPLY expression {
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_MULTIPLY);
     }
     | expression DIVIDE expression {
-        $$.node = ast_new($2.name, $1.node, $3.node);
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_DIVIDE);
     }
     | value { $$.node = $1.node; }
     ;
@@ -166,23 +166,23 @@ expression: expression ADD expression {
 
 value: NUMBER { 
         add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
-        $$.node = ast_new($1.name, NULL, NULL);
+        $$.node = ast_new($1.name, NULL, NULL, AST_INTEGER);
     }
     | FLOAT_NUM { 
         add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
-        $$.node = ast_new($1.name, NULL, NULL);
+        $$.node = ast_new($1.name, NULL, NULL, AST_FLOAT);
     }
     | ID { 
         check_variable_declaration($1.name);
-        $$.node = ast_new($1.name, NULL, NULL);
+        $$.node = ast_new($1.name, NULL, NULL, AST_ID);
      }
     ;
 
 return: RETURN { 
         add_symbol(symbol_table,TYPE_KEYWORD, &data_type, yytext, counter); 
     } expression ';' {
-        $1.node = ast_new("return", NULL, NULL);
-        $$.node = ast_new("RETURN", $1.node, $3.node);
+        // $1.node = ast_new("return", NULL, NULL, AST_RETURN);
+        $$.node = ast_new("RETURN", NULL, $3.node, AST_RETURN);
     } 
     | { $$.node = NULL; }
     ;

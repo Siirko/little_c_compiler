@@ -19,11 +19,12 @@ void trunks_show(trunks_t *p)
     printf("%s", p->str);
 }
 
-ast_t *ast_new(char *token, ast_t *left, ast_t *right)
+ast_t *ast_new(char *token, ast_t *left, ast_t *right, enum ast_type type)
 {
     ast_t *ast = calloc(sizeof(ast_t), 1);
     CHK_NULL(ast);
     strncpy(ast->token, token, 1024);
+    ast->type = type;
     ast->left = left;
     ast->right = right;
     return ast;
@@ -71,7 +72,7 @@ void ast_show_helper(ast_t *ast, trunks_t *prev, bool is_left)
     }
 
     trunks_show(&trunk);
-    printf("%s\n", ast->token);
+    printf("%s (%d)\n", ast->token, ast->type);
 
     if (prev)
         prev->str = prev_str;
