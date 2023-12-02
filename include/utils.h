@@ -21,7 +21,7 @@
     do                                                                                                       \
     {                                                                                                        \
         if ((op) == -1)                                                                                      \
-            raler(1, ANSI_BOLD ANSI_COLOR_RED "Error on line in file %s with %s" ANSI_RESET, __LINE__,       \
+            raler(1, ANSI_BOLD ANSI_COLOR_RED "Error on line %d in file %s with %s" ANSI_RESET, __LINE__,    \
                   __FILE__, __FUNCTION__);                                                                   \
     } while (0)
 
@@ -29,17 +29,17 @@
     do                                                                                                       \
     {                                                                                                        \
         if ((op) == NULL)                                                                                    \
-            raler(1, ANSI_BOLD ANSI_COLOR_RED "Error on line in file %s with %s" ANSI_RESET, __LINE__,       \
+            raler(1, ANSI_BOLD ANSI_COLOR_RED "Error on line %d in file %s with %s" ANSI_RESET, __LINE__,    \
                   __FILE__, __FUNCTION__);                                                                   \
     } while (0)
 
-noreturn void raler(int syserr, const char *err_msg, const char *format, ...)
+noreturn void raler(int syserr, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
     if (syserr == 1)
-        perror(err_msg);
+        perror("");
     exit(EXIT_FAILURE);
 }
