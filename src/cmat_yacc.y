@@ -112,7 +112,7 @@ statement: datatype ID {
 init: '=' value {
         $$.node = $2.node;
     }
-    | ',' ID { 
+    | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } init {
         $2.node = ast_new($2.name, NULL, NULL);
