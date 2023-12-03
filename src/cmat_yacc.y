@@ -101,10 +101,13 @@ if_statement: IF {
         is_for = false;
     } '(' condition ')' {
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block, list_quadruples);
-    }'{' body '}' else {
-        ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
-        $$.node = ast_new("if-else", tmp, $10.node, AST_IF_ELSE);
+    }'{' body '}' {    
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block, list_quadruples);
+    }
+    else {
+        ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
+        $$.node = ast_new("if-else", tmp, $11.node, AST_IF_ELSE);
+        // quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, "next", list_quadruples);
     }
 
 else: ELSE { 

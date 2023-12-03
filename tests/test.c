@@ -12,5 +12,9 @@ int main()
     {
         x = 1 + x;
     }
+    else
+    {
+        y = 1 + y;
+    }
     return x + y + 2;
 }

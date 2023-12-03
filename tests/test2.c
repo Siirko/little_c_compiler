@@ -5,11 +5,11 @@ int main()
     int a = 3;
     int x;
     a = x * 3 + 5;
-    if (x > a)
+    if (x < a)
     {
         printf("Hi!");
         a = x * 3 + 100;
-        if (x > a)
+        if (x < a)
         {
             printf("Hi!");
             a = x * 3 + 100;

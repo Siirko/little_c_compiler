@@ -29,8 +29,8 @@ int main(int argc, char const *argv[])
     yyparse();
     fclose(yyin);
 
-    show_symbol_table(symbol_table);
-    ast_show(head);
+    // show_symbol_table(symbol_table);
+    // ast_show(head);
 
     for (size_t i = 0; i < vector_size(list_quadruples); i++)
         print_quad(list_quadruples[i]);
