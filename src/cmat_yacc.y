@@ -3,9 +3,11 @@
     #include <string.h>
     #include <stdlib.h>
     #include <ctype.h>
+    #include <stdbool.h>
     #include "../include/ast.h"
     #include "../include/hashmap.h"
     #include "../include/symbol.h"
+    #include "../include/quadr.h"
     
     void yyerror(const char *s);
     int yylex();
@@ -13,25 +15,43 @@
     extern char* yytext;
     extern int yylineno;
 
+    void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     void check_variable_declaration(char* token);
 
     ast_t *head;
     hashmap_t* symbol_table;
+    quadr_t* list_quadruples;
     enum data_type data_type;
+    bool is_for = false;
     extern int counter;
     int error_count = 0;
+    int temp_var = 0;
+    int labels = 0;
 %}
+
 
 %union {
     struct node {
         char name[1024];
         struct ast* node;
     } node_t;
+
+    struct relop_node {
+        char name[1024];
+        int type;
+        struct ast* node;
+    } relop_node_t;
+
+    struct cond_node {
+        char if_block[1024];
+        char else_block[1024];
+        struct ast* node;
+    } cond_node_t;
 }
 
 %token <node_t>  PRINTFF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> printf_statement main body return datatype expression statement init value relop program condition else body_element for_statement if_statement
-
+%type <node_t> iterator printf_statement main body return datatype expression statement init value program else body_element for_statement if_statement
+%type <cond_node_t> condition
 %left ADD SUBTRACT MULTIPLY DIVIDE
 
 %%
@@ -67,17 +87,24 @@ body_element: for_statement
 
 for_statement: FOR { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
-    } '(' statement ';' condition ';' statement ')' '{' body '}' {
+        is_for = true;
+    } '(' statement ';' condition ';' iterator ')' '{' body '}' {
         ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
         ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
         $$.node = ast_new($1.name, tmp2, $11.node, AST_FOR);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, list_quadruples);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block, list_quadruples);
     }
 
 if_statement: IF { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
-    } '(' condition ')' '{' body '}' else {
-        ast_t *tmp = ast_new($1.name, $4.node, $7.node, AST_IF);
-        $$.node = ast_new("if-else", tmp, $9.node, AST_IF_ELSE);
+        is_for = false;
+    } '(' condition ')' {
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block, list_quadruples);
+    }'{' body '}' else {
+        ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
+        $$.node = ast_new("if-else", tmp, $10.node, AST_IF_ELSE);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block, list_quadruples);
     }
 
 else: ELSE { 
@@ -89,6 +116,19 @@ else: ELSE {
     ;
 
 
+iterator: ID { 
+        check_variable_declaration($1.name); 
+    } UNARY {
+        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
+        $3.node = ast_new($3.name, NULL, NULL, AST_UNARY);
+        $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
+        char tmp[1024] = {0};
+        sprintf(tmp, "t%d", temp_var);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp, list_quadruples);
+        sprintf(tmp, "t%d", temp_var++);
+        quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name, list_quadruples);
+    }
+
 statement: datatype ID { 
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } init {
@@ -98,26 +138,13 @@ statement: datatype ID {
     | ID { check_variable_declaration($1.name); } '=' expression {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
         $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
-    }
-    | ID { check_variable_declaration($1.name); } relop expression {
-        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
-        $$.node = ast_new($3.name, $1.node, $4.node, AST_RELOP);
-    }
-    | ID { check_variable_declaration($1.name); } UNARY {
-        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
-        $3.node = ast_new($3.name, NULL, NULL, AST_UNARY);
-        $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
-    }
-    | UNARY ID  {
-        check_variable_declaration($2.name);
-        $1.node = ast_new($1.name, NULL, NULL, AST_UNARY);
-        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
-        $$.node = ast_new("ITERATOR", $1.node, $2.node, AST_ITERATOR);
+        quadr_gencode(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name, list_quadruples);
     }
     ;
 
 init: '=' expression {
         $$.node = $2.node;
+        quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name, list_quadruples);
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
@@ -134,32 +161,56 @@ printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, y
     }
     ;
 
-condition: value relop value {
+condition: value LT value {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_LT);
+    }
+    | value GT value {
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_GT);
+    }
+    | value LE value {
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_LE);
+    }
+    | value GE value {
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_GE);
+    }
+    | value EQ value {
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_EQ);
+    }
+    | value NE value {
+        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
+        quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_NE);
     }
     ;
 
-relop: LT
-    | GT
-    | LE
-    | GE
-    | EQ
-    | NE
-    ;
 
 expression: expression ADD expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_ADD);
+        sprintf($$.name, "t%d", temp_var++);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, $3.name, $$.name, list_quadruples);
     }
     | expression SUBTRACT expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_SUBTRACT);
+        sprintf($$.name, "t%d", temp_var++);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, $1.name, $3.name, $$.name, list_quadruples);
     }
     | expression MULTIPLY expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_MULTIPLY);
+        sprintf($$.name, "t%d", temp_var++);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, $1.name, $3.name, $$.name, list_quadruples);
     }
     | expression DIVIDE expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_DIVIDE);
+        sprintf($$.name, "t%d", temp_var++);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name, list_quadruples);
     }
-    | value { $$.node = $1.node; }
+    | value { 
+        $$.node = $1.node; 
+    }
     ;
 
 
@@ -181,13 +232,35 @@ value: NUMBER {
 return: RETURN { 
         add_symbol(symbol_table,TYPE_KEYWORD, &data_type, yytext, counter); 
     } expression ';' {
-        // $1.node = ast_new("return", NULL, NULL, AST_RETURN);
         $$.node = ast_new("RETURN", NULL, $3.node, AST_RETURN);
     } 
     | { $$.node = NULL; }
     ;
 
 %%
+
+void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op)
+{
+    if(is_for)
+    {
+        sprintf(if_block, "L%d", labels++);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, if_block, list_quadruples);
+        char tmp[1024] = {0};
+        sprintf(tmp, "L%d", labels);
+        quadr_gencode(QUAD_TYPE_IF_NOT, op, arg1, arg2, tmp, list_quadruples);
+        sprintf(else_block, "L%d", labels++);
+    }
+    else
+    {
+        char tmp[1024] = {0};
+        sprintf(tmp, "L%d", labels);
+        quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp, list_quadruples);
+        sprintf(tmp, "L%d", labels+1);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp, list_quadruples);
+        sprintf(if_block, "L%d", labels++);
+        sprintf(else_block, "L%d", labels++);
+    }
+}
 
 void check_variable_declaration(char* token) {
     if(hashmap_get(symbol_table, token) == NULL)

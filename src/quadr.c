@@ -5,43 +5,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-void quad_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                  quadr_hv_t *quadruples)
+void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
+                   quadr_t *list_quadruples)
 {
     quadr_t quad = {
         .type = type,
         .op = op,
-        .arg1 = arg1,
-        .arg2 = arg2,
-        .res = res,
+        .arg1 = arg1 != NULL ? strdup(arg1) : NULL,
+        .arg2 = arg2 != NULL ? strdup(arg2) : NULL,
+        .res = res != NULL ? strdup(res) : NULL,
     };
-    // vec_push(quadruples->quads, quad);
+    vector_push_back(list_quadruples, quad);
 }
 
 void print_quad(quadr_t quad)
 {
-    printf("e\n");
-    // if (quad->type == QUAD_TYPE_BINARY_ASSIGN)
-    //     printf(quad_type_str[quad->op], quad->res, quad->arg1, quad->arg2);
-    // else if (quad->type == QUAD_TYPE_UNARY_ASSIGN)
-    //     printf(quad_type_str[quad->op], quad->res, quad->arg1, quad->arg2);
-    // else if (quad->type == QUAD_TYPE_COPY)
-    //     printf(quad_type_str[quad->op], quad->res, quad->arg1);
-    // else if (quad->type == QUAD_TYPE_GOTO)
-    //     printf(quad_type_str[quad->op], atoi(quad->arg1));
-    // else if (quad->type == QUAD_TYPE_IF)
-    //     printf(quad_type_str[quad->op], quad->arg1, quad->arg2, atoi(quad->res));
-    // else if (quad->type == QUAD_TYPE_IF_ELSE)
-    //     printf(quad_type_str[quad->op], quad->arg1, quad->arg2, atoi(quad->res), atoi(quad->arg1));
-    // else if (quad->type == QUAD_TYPE_CALL)
-    //     printf(quad_type_str[quad->op]);
+    if (quad.type == QUAD_TYPE_BINARY_ASSIGN)
+        printf(quad_type_str[quad.type], quad.res, quad.arg1, quad_op_str[quad.op], quad.arg2);
+    else if (quad.type == QUAD_TYPE_COPY)
+        printf(quad_type_str[quad.type], quad.res, quad.arg1);
+    else if (quad.type == QUAD_TYPE_IF || quad.type == QUAD_TYPE_IF_NOT)
+        printf(quad_type_str[quad.type], quad.arg1, quad_op_str[quad.op], quad.arg2, quad.res);
+    else if (quad.type == QUAD_TYPE_GOTO || QUAD_TYPE_LABEL)
+        printf(quad_type_str[quad.type], quad.res);
     // else
     //     printf("Unknown quad type\n");
-}
-
-void quad_gentmp(char *id)
-{
-    // static int tmp_count = 0;
-    // int len = sprintf(id, "t%d", tmp_count++);
-    // id[len] = '\0';
+    // else if (quad->type == QUAD_TYPE_UNARY_ASSIGN)
+    //     printf(quad_type_str[quad->op], quad->res, quad->arg1, quad->arg2);
 }

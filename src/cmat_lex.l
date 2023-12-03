@@ -4,6 +4,8 @@
 %}
 
 %option yylineno
+%option nounput
+%option noinput
 
 alpha [a-zA-Z]
 digit [0-9]

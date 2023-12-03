@@ -1,5 +1,6 @@
 #pragma once
 #include "symbol.h"
+#include "vector.h"
 
 // https://moodle.unistra.fr/pluginfile.php/909854/mod_resource/content/2/cours5.pdf
 
@@ -11,15 +12,15 @@
     /* x = y */                                                                                              \
     X(QUAD_TYPE_COPY, "%s = %s\n")                                                                           \
     /* goto LABEL */                                                                                         \
-    X(QUAD_TYPE_GOTO, "GOTO L%d\n")                                                                          \
+    X(QUAD_TYPE_GOTO, "GOTO %s\n")                                                                           \
     /* if x relop y goto LABEL */                                                                            \
-    X(QUAD_TYPE_IF, "IF (%s %s %s) GOTO L%d\n")                                                              \
-    /* if x relop y goto LABEL1 else goto LABEL2 */                                                          \
-    X(QUAD_TYPE_IF_ELSE, "if (%s %s %s) GOTO L%d ELSE GOTO L%d\n")                                           \
+    X(QUAD_TYPE_IF, "IF (%s %s %s) GOTO %s\n")                                                               \
+    X(QUAD_TYPE_IF_NOT, "IF NOT (%s %s %s) GOTO %s\n")                                                       \
     /* param x */                                                                                            \
     /* call y, n*/                                                                                           \
     /* ex: param a, param b, call sqrt, 2*/                                                                  \
-    X(QUAD_TYPE_CALL, "")
+    X(QUAD_TYPE_CALL, "")                                                                                    \
+    X(QUAD_TYPE_LABEL, "%s:\n")
 
 #define QUAD_OPS                                                                                             \
     X(QUAD_OP_ADD, "+")                                                                                      \
@@ -29,7 +30,9 @@
     X(QUAD_OP_LT, "<")                                                                                       \
     X(QUAD_OP_LE, "<=")                                                                                      \
     X(QUAD_OP_GT, ">")                                                                                       \
-    X(QUAD_OP_GE, ">=")
+    X(QUAD_OP_GE, ">=")                                                                                      \
+    X(QUAD_OP_EQ, "==")                                                                                      \
+    X(QUAD_OP_NE, "!=")
 
 #define X(a, b) a,
 enum quad_types
@@ -62,8 +65,8 @@ typedef struct quadr_hv
     // vec_quadr_t *quads;
 } quadr_hv_t;
 
-void quad_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                  quadr_hv_t *quadruples);
+void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
+                   quadr_t *list_quadruples);
 
 void print_quad(quadr_t quad);
 
