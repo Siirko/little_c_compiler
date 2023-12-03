@@ -30,9 +30,11 @@ static const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
 static const char *data_type_str[] = {DATA_TYPE_MAP};
 #undef X
 
+#define SYMBOL_MAX_SIZE 1024
+
 typedef struct symbol
 {
-    char id[1024];
+    char id[SYMBOL_MAX_SIZE];
     enum symbol_type type;
     enum data_type data_type;
     int line;

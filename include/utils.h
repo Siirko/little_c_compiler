@@ -33,7 +33,7 @@
                   __FILE__, __FUNCTION__);                                                                   \
     } while (0)
 
-noreturn void raler(int syserr, const char *format, ...)
+noreturn static inline void raler(int syserr, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
