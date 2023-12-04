@@ -23,10 +23,12 @@
     quadr_t* list_quadruples;
     enum data_type data_type;
     bool is_for = false;
+    bool in_if_condition = false;
     extern int counter;
     int error_count = 0;
     int temp_var = 0;
     int labels = 0;
+    int if_counter = 0;
 %}
 
 
@@ -99,21 +101,33 @@ for_statement: FOR {
 if_statement: IF { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
         is_for = false;
+        in_if_condition = true;
+        ++if_counter;
     } '(' condition ')' {
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block, list_quadruples);
-    }'{' body '}' {    
+    }'{' body '}' {
+        char tmp2[1024] = {0};
+        sprintf(tmp2, "L%d", labels);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2, list_quadruples);
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block, list_quadruples);
     }
     else {
         ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
         $$.node = ast_new("if-else", tmp, $11.node, AST_IF_ELSE);
-        // quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, "next", list_quadruples);
     }
 
 else: ELSE { 
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '{' body '}' {
         $$.node = ast_new($1.name, NULL, $4.node, AST_ELSE);
+        --if_counter;
+        if(in_if_condition && if_counter == 0)
+        {
+            char tmp2[1024] = {0};
+            sprintf(tmp2, "L%d", labels);
+            quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, tmp2, list_quadruples);
+            in_if_condition = false;
+        }
     }
     | { $$.node = NULL; }
     ;
@@ -258,7 +272,7 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
         quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp, list_quadruples);
-        sprintf(tmp, "L%d", labels+1);
+        sprintf(tmp, "L%d\n", labels+1);
         quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp, list_quadruples);
         sprintf(if_block, "L%d", labels++);
         sprintf(else_block, "L%d", labels++);

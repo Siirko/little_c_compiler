@@ -8,7 +8,7 @@ int main()
     {
         a = a + 1;
     }
-    if (x < y)
+    if (x > y)
     {
         x = 1 + x;
     }
@@ -16,5 +16,5 @@ int main()
     {
         y = 1 + y;
     }
-    return x + y + 2;
+    return 2;
 }

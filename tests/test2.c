@@ -16,7 +16,14 @@ int main()
         }
         else
         {
-            x = a * 3 + 100;
+            if (x < a)
+            {
+                x = 234;
+            }
+            else
+            {
+                x = -12;
+            }
         }
     }
     else

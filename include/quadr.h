@@ -14,13 +14,13 @@
     /* goto LABEL */                                                                                         \
     X(QUAD_TYPE_GOTO, "GOTO %s\n")                                                                           \
     /* if x relop y goto LABEL */                                                                            \
-    X(QUAD_TYPE_IF, "IF (%s %s %s) GOTO %s\n")                                                               \
-    X(QUAD_TYPE_IF_NOT, "IF NOT (%s %s %s) GOTO %s\n")                                                       \
+    X(QUAD_TYPE_IF, "\nIF (%s %s %s) GOTO %s\n")                                                             \
+    X(QUAD_TYPE_IF_NOT, "\nIF NOT (%s %s %s) GOTO %s\n")                                                     \
     /* param x */                                                                                            \
     /* call y, n*/                                                                                           \
     /* ex: param a, param b, call sqrt, 2*/                                                                  \
     X(QUAD_TYPE_CALL, "")                                                                                    \
-    X(QUAD_TYPE_LABEL, "%s:\n")
+    X(QUAD_TYPE_LABEL, "\n%s:\n")
 
 #define QUAD_OPS                                                                                             \
     X(QUAD_OP_ADD, "+")                                                                                      \
