@@ -18,9 +18,9 @@
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     void check_variable_declaration(char* token);
 
+    vec_quadr_t vec_quadr;
     ast_t *head;
     hashmap_t* symbol_table;
-    quadr_t* list_quadruples;
     enum data_type data_type;
     bool is_for = false;
     bool in_if_condition = false;
@@ -29,6 +29,8 @@
     int temp_var = 0;
     int labels = 0;
     int if_counter = 0;
+    int id_if_start = 0;
+    vec_int_t i_if_end;
 %}
 
 
@@ -94,8 +96,8 @@ for_statement: FOR {
         ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
         ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
         $$.node = ast_new($1.name, tmp2, $11.node, AST_FOR);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, list_quadruples);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block, list_quadruples);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, &vec_quadr);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block,  &vec_quadr);
     }
 
 if_statement: IF { 
@@ -104,12 +106,14 @@ if_statement: IF {
         in_if_condition = true;
         ++if_counter;
     } '(' condition ')' {
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block, list_quadruples);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block,  &vec_quadr);
     }'{' body '}' {
         char tmp2[1024] = {0};
         sprintf(tmp2, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2, list_quadruples);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block, list_quadruples);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2,  &vec_quadr);
+        if(in_if_condition)
+            vec_push(&i_if_end, vec_quadr.length-1);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block,  &vec_quadr);
     }
     else {
         ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
@@ -120,12 +124,18 @@ else: ELSE {
         add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '{' body '}' {
         $$.node = ast_new($1.name, NULL, $4.node, AST_ELSE);
-        --if_counter;
-        if(in_if_condition && if_counter == 0)
+        if(in_if_condition && --if_counter == 0)
         {
             char tmp2[1024] = {0};
             sprintf(tmp2, "L%d", labels);
-            quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, tmp2, list_quadruples);
+            quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, tmp2,  &vec_quadr);
+            int size = i_if_end.length;
+            for(int i = 0; i < size; ++i)
+            {
+                int index = vec_pop(&i_if_end);
+                free(vec_quadr.data[index].res);
+                vec_quadr.data[index].res = strdup(tmp2);
+            }
             in_if_condition = false;
         }
     }
@@ -141,9 +151,9 @@ iterator: ID {
         $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
         char tmp[1024] = {0};
         sprintf(tmp, "t%d", temp_var);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp, list_quadruples);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp,  &vec_quadr);
         sprintf(tmp, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name,  &vec_quadr);
     }
 
 statement: datatype ID { 
@@ -155,13 +165,13 @@ statement: datatype ID {
     | ID { check_variable_declaration($1.name); } '=' expression {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
         $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
-        quadr_gencode(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name,  &vec_quadr);
     }
     ;
 
 init: '=' expression {
         $$.node = $2.node;
-        quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name,  &vec_quadr);
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
@@ -208,22 +218,22 @@ condition: value LT value {
 expression: expression ADD expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_ADD);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, $3.name, $$.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, $3.name, $$.name,  &vec_quadr);
     }
     | expression SUBTRACT expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_SUBTRACT);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, $1.name, $3.name, $$.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, $1.name, $3.name, $$.name,  &vec_quadr);
     }
     | expression MULTIPLY expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_MULTIPLY);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, $1.name, $3.name, $$.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, $1.name, $3.name, $$.name,  &vec_quadr);
     }
     | expression DIVIDE expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_DIVIDE);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name, list_quadruples);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name,  &vec_quadr);
     }
     | value { 
         $$.node = $1.node; 
@@ -261,19 +271,19 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
     if(is_for)
     {
         sprintf(if_block, "L%d", labels++);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, if_block, list_quadruples);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, if_block,  &vec_quadr);
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_IF_NOT, op, arg1, arg2, tmp, list_quadruples);
+        quadr_gencode(QUAD_TYPE_IF_NOT, op, arg1, arg2, tmp,  &vec_quadr);
         sprintf(else_block, "L%d", labels++);
     }
     else
     {
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp, list_quadruples);
+        quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp,  &vec_quadr);
         sprintf(tmp, "L%d\n", labels+1);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp, list_quadruples);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp,  &vec_quadr);
         sprintf(if_block, "L%d", labels++);
         sprintf(else_block, "L%d", labels++);
     }

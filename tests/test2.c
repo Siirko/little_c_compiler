@@ -28,6 +28,22 @@ int main()
     }
     else
     {
-        x = a * 3 + 98;
+        if (x > a)
+        {
+            x = 234;
+        }
+        else
+        {
+            x = -12;
+        }
+    }
+    int zzzzzzzzzzzz = 0;
+    if (zzzzzzzzzzzz > 3)
+    {
+        zzzzzzzzzzzz = 3;
+    }
+    else
+    {
+        zzzzzzzzzzzz = 4;
     }
 }

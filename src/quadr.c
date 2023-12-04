@@ -6,7 +6,7 @@
 #include <string.h>
 
 void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                   quadr_t *list_quadruples)
+                   vec_quadr_t *vec_quadruples)
 {
     quadr_t quad = {
         .type = type,
@@ -15,7 +15,7 @@ void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg
         .arg2 = arg2 != NULL ? strdup(arg2) : NULL,
         .res = res != NULL ? strdup(res) : NULL,
     };
-    vector_push_back(list_quadruples, quad);
+    vec_push(vec_quadruples, quad);
 }
 
 void print_quad(quadr_t quad)

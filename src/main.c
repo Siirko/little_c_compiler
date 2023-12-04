@@ -2,14 +2,14 @@
 #include "../include/hashmap.h"
 #include "../include/quadr.h"
 #include "../include/symbol.h"
-#include "../include/vector.h"
 #include <stdio.h>
 
 extern int yyparse();
 extern FILE *yyin;
 extern hashmap_t *symbol_table;
 extern ast_t *head;
-extern quadr_t *list_quadruples;
+extern vec_int_t i_if_end;
+extern vec_quadr_t vec_quadr;
 
 int main(int argc, char const *argv[])
 {
@@ -23,8 +23,8 @@ int main(int argc, char const *argv[])
         }
     }
 
-    list_quadruples = vector_init(quadr_t, 100); // will be rezised internally if needed
-
+    vec_init(&vec_quadr);
+    vec_init(&i_if_end);
     symbol_table = hashmap_init(10); // will be rezised internally if needed
     yyparse();
     fclose(yyin);
@@ -32,19 +32,22 @@ int main(int argc, char const *argv[])
     // show_symbol_table(symbol_table);
     // ast_show(head);
 
-    for (size_t i = 0; i < vector_size(list_quadruples); i++)
-        print_quad(list_quadruples[i]);
+    int i;
+    quadr_t quad;
+    vec_foreach(&vec_quadr, quad, i) { print_quad(quad); }
 
     hashmap_free(symbol_table);
     free(symbol_table);
 
     ast_free(head);
-    for (size_t i = 0; i < vector_size(list_quadruples); i++)
+    vec_foreach(&vec_quadr, quad, i)
     {
-        free(list_quadruples[i].arg1);
-        free(list_quadruples[i].arg2);
-        free(list_quadruples[i].res);
+        free(quad.arg1);
+        free(quad.arg2);
+        free(quad.res);
     }
-    vector_free(list_quadruples);
+
+    vec_deinit(&i_if_end);
+    vec_deinit(&vec_quadr);
     return 0;
 }

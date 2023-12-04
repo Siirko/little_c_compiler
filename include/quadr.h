@@ -1,6 +1,6 @@
 #pragma once
 #include "symbol.h"
-#include "vector.h"
+#include "vec.h"
 
 // https://moodle.unistra.fr/pluginfile.php/909854/mod_resource/content/2/cours5.pdf
 
@@ -59,14 +59,10 @@ typedef struct quadr
     char *res;
 } quadr_t;
 
-typedef struct quadr_hv
-{
-    hashmap_t *tmp_vars;
-    // vec_quadr_t *quads;
-} quadr_hv_t;
+typedef vec_t(quadr_t) vec_quadr_t;
 
 void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                   quadr_t *list_quadruples);
+                   vec_quadr_t *vec_quadruples);
 
 void print_quad(quadr_t quad);
 
