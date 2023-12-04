@@ -131,6 +131,8 @@ else: ELSE {
                 vec_quadr.data[index].res = strdup(tmp2);
             }
             in_if_condition = false;
+            // really needed to be done here ?
+            // ++labels;
         }
     }
     | { $$.node = NULL; }
