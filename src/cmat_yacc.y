@@ -40,12 +40,6 @@
         struct ast* node;
     } node_t;
 
-    struct relop_node {
-        char name[1024];
-        int type;
-        struct ast* node;
-    } relop_node_t;
-
     struct cond_node {
         char if_block[1024];
         char else_block[1024];
