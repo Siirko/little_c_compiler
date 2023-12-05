@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
     yyparse();
     fclose(yyin);
 
-    // show_symbol_table(symbol_table);
+    show_symbol_table(symbol_table);
     // ast_show(head);
 
     int i;

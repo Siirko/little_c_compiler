@@ -10,6 +10,7 @@
 
 #define DATA_TYPE_MAP                                                                                        \
     X(TYPE_INT, "int")                                                                                       \
+    X(TYPE_STR, "str")                                                                                       \
     X(TYPE_FLOAT, "float")                                                                                   \
     X(TYPE_NAD, "NaD")
 

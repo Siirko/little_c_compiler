@@ -132,7 +132,7 @@ else: ELSE {
             }
             in_if_condition = false;
             // really needed to be done here ?
-            // ++labels;
+            ++labels;
         }
     }
     | { $$.node = NULL; }
@@ -181,6 +181,9 @@ init: '=' expression {
 printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); } '(' STR ')' ';'
     { 
         $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
+        enum data_type type = TYPE_STR;
+        add_symbol(symbol_table, TYPE_CONST, &type, $4.name, counter);
+        quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr);
     }
     ;
 

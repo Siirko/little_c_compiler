@@ -20,14 +20,28 @@ void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg
 
 void print_quad(quadr_t quad)
 {
-    if (quad.type == QUAD_TYPE_BINARY_ASSIGN)
+    switch (quad.type)
+    {
+    case QUAD_TYPE_BINARY_ASSIGN:
         printf(quad_type_str[quad.type], quad.res, quad.arg1, quad_op_str[quad.op], quad.arg2);
-    else if (quad.type == QUAD_TYPE_COPY)
+        break;
+    case QUAD_TYPE_COPY:
         printf(quad_type_str[quad.type], quad.res, quad.arg1);
-    else if (quad.type == QUAD_TYPE_IF || quad.type == QUAD_TYPE_IF_NOT)
+        break;
+    case QUAD_TYPE_IF:
+    case QUAD_TYPE_IF_NOT:
         printf(quad_type_str[quad.type], quad.arg1, quad_op_str[quad.op], quad.arg2, quad.res);
-    else if (quad.type == QUAD_TYPE_GOTO || QUAD_TYPE_LABEL)
+        break;
+    case QUAD_TYPE_GOTO:
+    case QUAD_TYPE_LABEL:
         printf(quad_type_str[quad.type], quad.res);
+        break;
+    case QUAD_TYPE_SYSCALL_PRINT_STR:
+        printf(quad_type_str[quad.type], quad.arg1);
+        break;
+    default:
+        printf("Unknown quad type\n");
+    }
     // else
     //     printf("Unknown quad type\n");
     // else if (quad->type == QUAD_TYPE_UNARY_ASSIGN)
