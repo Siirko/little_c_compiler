@@ -153,10 +153,12 @@ iterator: ID {
     }
 
 statement: datatype ID { 
-        add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
+        add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter);
     } init {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
         $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
+        if($4.node->type == AST_NULL)
+            quadr_gencode(QUAD_TYPE_COPY, 0, "0", NULL, $2.name,  &vec_quadr);
     }
     | ID { check_variable_declaration($1.name); } '=' expression {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
@@ -171,11 +173,10 @@ init: '=' expression {
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
-    } init {
-        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
-        $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
+    } 
+    | { 
+        $$.node = ast_new("NULL", NULL, NULL, AST_NULL); 
     }
-    | { $$.node = ast_new("NULL", NULL, NULL, AST_NULL); }
     ;
 
 printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); } '(' STR ')' ';'
