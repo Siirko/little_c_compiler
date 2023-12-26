@@ -86,6 +86,7 @@ body_element: for_statement
     ;
 
 scope: '{' { 
+        // this has to be done in a better way
         printf("%d \n", ++depth_scope); 
     } body '}' {
         $$.node = $3.node;
