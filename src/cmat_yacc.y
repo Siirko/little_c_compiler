@@ -30,6 +30,8 @@
     int labels = 0;
     int if_counter = 0;
     int id_if_start = 0;
+    int depth_scope = 0;
+    int width_scope = 0;
     vec_int_t i_if_end;
 %}
 
@@ -48,7 +50,7 @@
 }
 
 %token <node_t>  PRINTFF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> iterator printf_statement main body return datatype expression statement init value program else body_element for_statement if_statement
+%type <node_t> iterator printf_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
 %type <cond_node_t> condition
 %left ADD SUBTRACT MULTIPLY DIVIDE
 
@@ -83,25 +85,31 @@ body_element: for_statement
     | printf_statement
     ;
 
+scope: '{' { 
+        printf("%d \n", ++depth_scope); 
+    } body '}' {
+        $$.node = $3.node;
+        --depth_scope;
+    }
+    ;
+
 for_statement: FOR { 
-        add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
         is_for = true;
-    } '(' statement ';' condition ';' iterator ')' '{' body '}' {
+    } '(' statement ';' condition ';' iterator ')' scope {
         ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
         ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
-        $$.node = ast_new($1.name, tmp2, $11.node, AST_FOR);
+        $$.node = ast_new($1.name, tmp2, $10.node, AST_FOR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, &vec_quadr);
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block,  &vec_quadr);
     }
 
 if_statement: IF { 
-        add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
         is_for = false;
         in_if_condition = true;
         ++if_counter;
     } '(' condition ')' {
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block,  &vec_quadr);
-    }'{' body '}' {
+    } scope {
         char tmp2[1024] = {0};
         sprintf(tmp2, "L%d", labels);
         quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2,  &vec_quadr);
@@ -110,14 +118,12 @@ if_statement: IF {
         quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block,  &vec_quadr);
     }
     else {
-        ast_t *tmp = ast_new($1.name, $4.node, $8.node, AST_IF);
-        $$.node = ast_new("if-else", tmp, $11.node, AST_IF_ELSE);
+        ast_t *tmp = ast_new($1.name, $4.node, $7.node, AST_IF);
+        $$.node = ast_new("if-else", tmp, $9.node, AST_IF_ELSE);
     }
 
-else: ELSE { 
-        add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
-    } '{' body '}' {
-        $$.node = ast_new($1.name, NULL, $4.node, AST_ELSE);
+else: ELSE scope {
+        $$.node = ast_new($1.name, NULL, $2.node, AST_ELSE);
         if(in_if_condition && --if_counter == 0)
         {
             char tmp2[1024] = {0};
@@ -243,11 +249,9 @@ expression: expression ADD expression {
 
 
 value: NUMBER { 
-        add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
         $$.node = ast_new($1.name, NULL, NULL, AST_INTEGER);
     }
     | FLOAT_NUM { 
-        add_symbol(symbol_table, TYPE_CONST, &data_type, yytext, counter); 
         $$.node = ast_new($1.name, NULL, NULL, AST_FLOAT);
     }
     | ID { 

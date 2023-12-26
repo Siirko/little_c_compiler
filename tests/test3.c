@@ -1,16 +1,28 @@
 int main()
 {
     int zzz;
-    int x = 1;
-    int y = 2;
-    int z = 3 + x + y;
-    int a = z;
     for (int i = 0; i < 10; i++)
     {
+        int for1 = 0;
         for (int j = 0; j < 10; j++)
         {
+            int pipip = 0;
             zzz = zzz + 1;
         }
+        for (int k = 0; k < 10; k++)
+        {
+            int caca = 0;
+            for1 = for1 + 1;
+        }
     }
-    return 2;
+    if (zzz == 100)
+    {
+        zzz = 0;
+    }
+    else
+    {
+        int pip = 0;
+        zzz = 1;
+    }
+    // return 2;
 }
