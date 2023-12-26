@@ -162,4 +162,4 @@ int cmp_hashnode_keys(const void *a, const void *b);
  * @brief Sort the hashmap according to the keys
  * @param map The hashmap
  */
-void hashmap_sort_keys(hashmap_t *map);
+void hashmap_sort_keys(hashmap_t *map, int (*cmp)(const void *, const void *));

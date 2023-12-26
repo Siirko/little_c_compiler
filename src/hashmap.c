@@ -204,7 +204,7 @@ int cmp_hashnode_keys(const void *a, const void *b)
     return (key_a < key_b) ? -1 : (key_a > key_b);
 }
 
-void hashmap_sort_keys(hashmap_t *map)
+void hashmap_sort_keys(hashmap_t *map, int (*cmp)(const void *, const void *))
 {
     hashnode_t **nodes = malloc(sizeof(hashnode_t *) * map->count);
     if (nodes == NULL)
@@ -223,7 +223,7 @@ void hashmap_sort_keys(hashmap_t *map)
             node = node->next;
         }
     }
-    qsort(nodes, map->count, sizeof(hashnode_t *), cmp_hashnode_keys);
+    qsort(nodes, map->count, sizeof(hashnode_t *), cmp);
     hashnode_t **new_nodes = calloc(sizeof(hashnode_t *), map->size + 1);
     if (new_nodes == NULL)
     {
