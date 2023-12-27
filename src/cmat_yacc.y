@@ -201,7 +201,7 @@ printf_statement: PRINTFF {
     { 
         $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
         enum data_type type = TYPE_STR;
-        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_CONST, &data_type, yytext, counter); 
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_CONST, &type, $4.name, counter);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr);
     }
     ;
