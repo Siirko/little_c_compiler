@@ -50,7 +50,7 @@
 }
 
 %token <node_t>  PRINTFF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> iterator printf_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
+%type <node_t> iterator iterator_init printf_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
 %type <cond_node_t> condition
 %left ADD SUBTRACT MULTIPLY DIVIDE
 
@@ -106,7 +106,7 @@ scope: '{' {
 
 for_statement: FOR { 
         is_for = true;
-    } '(' statement ';' condition ';' iterator ')' scope {
+    } '(' iterator_init ';' condition ';' iterator ')' scope {
         ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
         ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
         $$.node = ast_new($1.name, tmp2, $10.node, AST_FOR);
@@ -156,7 +156,7 @@ else: ELSE scope {
 
 
 iterator: ID { 
-        check_variable_declaration($1.name); 
+        check_variable_declaration($1.name);
     } UNARY {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
         $3.node = ast_new($3.name, NULL, NULL, AST_UNARY);
@@ -166,6 +166,14 @@ iterator: ID {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp,  &vec_quadr);
         sprintf(tmp, "t%d", temp_var++);
         quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name,  &vec_quadr);
+    }
+
+iterator_init: datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_ITERATOR, &data_type, yytext, counter); 
+    } '=' value {
+        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
+        $$.node = ast_new("declaration", $2.node, $5.node, AST_DECLARATION);
+        quadr_gencode(QUAD_TYPE_COPY, 0, $5.name, NULL, $2.name,  &vec_quadr);
     }
 
 statement: datatype ID {
@@ -306,17 +314,18 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
 }
 
 void check_variable_declaration(char* token) {
-    // Index of for loops are considered as error when used
-    // I don't know why !
     vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
-    int size = v_scopes->data[depth_scope].length -1;
-    vec_hashmap_t tmp;
-    vec_foreach_iter_start_rev(v_scopes, tmp, size)
+    int current_size_scope = v_scopes->data[depth_scope].length - 1;
+    if (current_size_scope < 0)
+        return;
+    for(int i = depth_scope; i >= 0; --i)
     {
-        int j;
-        hashmap_t *tmp2;
-        vec_foreach(&tmp, tmp2, j)
+        vec_hashmap_t *tmp = &v_scopes->data[i];
+        for(int j = tmp->length - 1; j >= 0; --j)
         {
+            hashmap_t *tmp2 = tmp->data[j];
+            if (tmp2->count == 0)
+                continue;
             if(hashmap_get(tmp2, token) != NULL)
                 return;
         }

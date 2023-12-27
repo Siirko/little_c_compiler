@@ -22,6 +22,7 @@ int main()
     }
     if (zzz == 100)
     {
+        l = l + 1;
         zzz = 0;
     }
     else

@@ -3,6 +3,7 @@
 
 // X macros for a map with enum as key and value
 #define SYMBOL_TYPE_MAP                                                                                      \
+    X(TYPE_ITERATOR, "iterator")                                                                             \
     X(TYPE_VARIABLE, "variable")                                                                             \
     X(TYPE_CONST, "const")                                                                                   \
     X(TYPE_FUNCTION, "function")                                                                             \

@@ -75,12 +75,16 @@ void show_symbol_table(hashmap_t *symbol_table)
     vec_hashmap_t tmp;
     vec_foreach(&v_scopes, tmp, i)
     {
+        if (tmp.length == 0)
+            continue;
         printf("Scope %d\n", i);
         printf("---------\n");
         int j;
         hashmap_t *tmp2;
         vec_foreach(&tmp, tmp2, j)
         {
+            if (tmp2->count == 0)
+                continue;
             hashmap_iterate(tmp2, show_symbol);
             printf("\n");
         }

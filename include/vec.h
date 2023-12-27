@@ -104,10 +104,6 @@
     if ((v)->length > 0)                                                                                     \
         for ((iter) = (v)->length - 1; (iter) >= 0 && (((var) = &(v)->data[(iter)]), 1); --(iter))
 
-#define vec_foreach_iter_start_rev(v, var, iter)                                                             \
-    if ((v)->length > 0)                                                                                     \
-        for (; (iter) >= 0 && (((var) = (v)->data[(iter)]), 1); --(iter))
-
 int vec_expand_(char **data, int *length, int *capacity, int memsz);
 int vec_reserve_(char **data, int *length, int *capacity, int memsz, int n);
 int vec_reserve_po2_(char **data, int *length, int *capacity, int memsz, int n);
