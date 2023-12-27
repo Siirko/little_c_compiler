@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vec.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +24,8 @@ typedef struct
     int count;
     hashnode_t **nodes;
 } hashmap_t;
+typedef vec_t(hashmap_t *) vec_hashmap_t;
+typedef vec_t(vec_hashmap_t) vec_vec_hashmap_t;
 
 typedef struct
 {

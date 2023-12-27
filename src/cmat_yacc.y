@@ -21,7 +21,7 @@
     vec_quadr_t vec_quadr;
     ast_t *head;
     hashmap_t* symbol_table;
-    hashmap_t *scope_dict;
+    hashmap_t *t_sym_tab;
     enum data_type data_type;
     bool is_for = false;
     bool in_if_condition = false;
@@ -66,6 +66,13 @@ program: main '(' ')' '{' body return '}' {
 
 
 main: datatype ID { 
+        init_scope_key(t_sym_tab, "main");
+        // test if 'main' is in t_sym_tab
+        // vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+        // symbol_t *sym = hashmap_get(v_scopes.data[0].data[0], "main");
+        // printf("%d\n\n", sym->type);
+
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_FUNCTION, &data_type, yytext, counter); 
         add_symbol(symbol_table, TYPE_FUNCTION, &data_type, yytext, counter); 
     }
     ;
@@ -87,20 +94,12 @@ body_element: for_statement
     ;
 
 scope: '{' { 
-        // this has to be done in a better way")
-        char tmp[1024] = {0};
-        sprintf(tmp, "%d", ++depth_scope);
-        if(hashmap_get(scope_dict, tmp) == NULL)
-        {
-            int val = 0;
-            hashmap_insert(scope_dict, tmp, &val, sizeof(int));
-        }
-        else
-        {
-            int *val = (int*)hashmap_get(scope_dict, tmp);
-            ++(*val);
-        }
-        // printf("%d %d\n", depth_scope, (*(int*)hashmap_get(scope_dict, tmp))); 
+        ++depth_scope;
+        vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+        if (v_scopes->length - 1 < depth_scope)
+            vec_push(v_scopes, (vec_hashmap_t){0});
+        // missing a condition here
+        vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
     } body '}' {
         $$.node = $3.node;
         --depth_scope;
@@ -172,7 +171,8 @@ iterator: ID {
         quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name,  &vec_quadr);
     }
 
-statement: datatype ID { 
+statement: datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter);
     } init {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
@@ -192,6 +192,7 @@ init: '=' expression {
         quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name,  &vec_quadr);
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
         add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } 
     | { 
@@ -199,10 +200,14 @@ init: '=' expression {
     }
     ;
 
-printf_statement: PRINTFF { add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); } '(' STR ')' ';'
+printf_statement: PRINTFF {
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
+        add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
+    } '(' STR ')' ';'
     { 
         $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
         enum data_type type = TYPE_STR;
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_CONST, &data_type, yytext, counter); 
         add_symbol(symbol_table, TYPE_CONST, &type, $4.name, counter);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr);
     }
@@ -275,6 +280,7 @@ value: NUMBER {
     ;
 
 return: RETURN { 
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
         add_symbol(symbol_table,TYPE_KEYWORD, &data_type, yytext, counter); 
     } expression ';' {
         $$.node = ast_new("RETURN", NULL, $3.node, AST_RETURN);

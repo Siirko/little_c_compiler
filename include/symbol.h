@@ -41,10 +41,17 @@ typedef struct symbol
     int line;
 } symbol_t;
 
+void init_scope_key(hashmap_t *symbol_table, char *key);
+
+void add_symbol_to_scope(hashmap_t *symbol_table, int scope, char *key, enum symbol_type type,
+                         enum data_type *data_type, char *yytext, int counter);
+
 void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *data_type, char *yytext,
                 int counter);
 
 void show_symbol(char *id, void *symbol);
+
+void free_scopes(char *id, void *scopes);
 
 void show_symbol_table(hashmap_t *symbol_table);
 

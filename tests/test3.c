@@ -1,6 +1,7 @@
 int main()
 {
     int zzz;
+    int zaeazeaz;
     for (int i = 0; i < 10; i++)
     {
         int for1 = 0;
@@ -28,5 +29,6 @@ int main()
         int pip = 0;
         zzz = 1;
     }
+    int zizi = 0;
     // return 2;
 }

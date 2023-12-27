@@ -8,17 +8,17 @@
 extern int yyparse();
 extern FILE *yyin;
 extern hashmap_t *symbol_table;
-extern hashmap_t *scope_dict;
 extern ast_t *head;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
+// extern vec_vec_hashmap_t v_scopes;
+extern hashmap_t *t_sym_tab;
 
 struct arguments arguments;
 
 void cmat_init()
 {
     symbol_table = hashmap_init(10); // will be rezised internally if needed
-    scope_dict = hashmap_init(10);   // will be rezised internally if needed
     vec_init(&vec_quadr);
     vec_init(&i_if_end);
 }
@@ -28,10 +28,8 @@ void cmat_free(void)
     hashmap_free(symbol_table);
     free(symbol_table);
 
-    hashmap_free(scope_dict);
-    free(scope_dict);
-
     ast_free(head);
+
     int i;
     quadr_t quad;
     vec_foreach(&vec_quadr, quad, i)
@@ -42,6 +40,10 @@ void cmat_free(void)
     }
     vec_deinit(&i_if_end);
     vec_deinit(&vec_quadr);
+
+    hashmap_iterate(t_sym_tab, free_scopes);
+    hashmap_free(t_sym_tab);
+    free(t_sym_tab);
 }
 
 void initiate_args(int argc, char *argv[])
@@ -60,6 +62,13 @@ void initiate_args(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+    t_sym_tab = hashmap_init(10);
+    // vec_push(&v_scopes, (vec_hashmap_t){0});
+    // vec_push(&v_scopes.data[0], hashmap_init(10));
+    // int value = 42;
+    // hashmap_insert(v_scopes.data[0].data[0], "test", &value, sizeof(int));
+    // printf("%d\n", *(int *)hashmap_get(v_scopes.data[0].data[0], "test"));
+
     initiate_args(argc, argv);
     yyin = fopen(arguments.cmat_file, "r");
     if (yyin == NULL)
@@ -71,6 +80,22 @@ int main(int argc, char *argv[])
     cmat_init();
     yyparse();
     fclose(yyin);
+
+    vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+    int i;
+    vec_hashmap_t tmp;
+    vec_foreach(&v_scopes, tmp, i)
+    {
+        printf("Scope %d\n", i);
+        printf("---------\n");
+        int j;
+        hashmap_t *tmp2;
+        vec_foreach(&tmp, tmp2, j)
+        {
+            hashmap_iterate(tmp2, show_symbol);
+            printf("\n");
+        }
+    }
 
     if (arguments.show_symbol_table)
         show_symbol_table(symbol_table);
