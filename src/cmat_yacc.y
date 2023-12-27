@@ -21,6 +21,7 @@
     vec_quadr_t vec_quadr;
     ast_t *head;
     hashmap_t* symbol_table;
+    hashmap_t *scope_dict;
     enum data_type data_type;
     bool is_for = false;
     bool in_if_condition = false;
@@ -86,8 +87,20 @@ body_element: for_statement
     ;
 
 scope: '{' { 
-        // this has to be done in a better way
-        printf("%d \n", ++depth_scope); 
+        // this has to be done in a better way")
+        char tmp[1024] = {0};
+        sprintf(tmp, "%d", ++depth_scope);
+        if(hashmap_get(scope_dict, tmp) == NULL)
+        {
+            int val = 0;
+            hashmap_insert(scope_dict, tmp, &val, sizeof(int));
+        }
+        else
+        {
+            int *val = (int*)hashmap_get(scope_dict, tmp);
+            ++(*val);
+        }
+        // printf("%d %d\n", depth_scope, (*(int*)hashmap_get(scope_dict, tmp))); 
     } body '}' {
         $$.node = $3.node;
         --depth_scope;

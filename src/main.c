@@ -8,6 +8,7 @@
 extern int yyparse();
 extern FILE *yyin;
 extern hashmap_t *symbol_table;
+extern hashmap_t *scope_dict;
 extern ast_t *head;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
@@ -17,6 +18,7 @@ struct arguments arguments;
 void cmat_init()
 {
     symbol_table = hashmap_init(10); // will be rezised internally if needed
+    scope_dict = hashmap_init(10);   // will be rezised internally if needed
     vec_init(&vec_quadr);
     vec_init(&i_if_end);
 }
@@ -25,6 +27,9 @@ void cmat_free(void)
 {
     hashmap_free(symbol_table);
     free(symbol_table);
+
+    hashmap_free(scope_dict);
+    free(scope_dict);
 
     ast_free(head);
     int i;

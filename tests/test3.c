@@ -14,6 +14,10 @@ int main()
             int caca = 0;
             for1 = for1 + 1;
         }
+        for (int l = 0; l < 10; l++)
+        {
+            l = l + 1;
+        }
     }
     if (zzz == 100)
     {
