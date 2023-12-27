@@ -70,7 +70,21 @@ void show_symbol(char *id, void *symbol)
 void show_symbol_table(hashmap_t *symbol_table)
 {
     printf("%-10s%-10s%-10s%-10s\n", "ID", "TYPE", "DATA_TYPE", "LINE");
-    hashmap_iterate(symbol_table, show_symbol);
+    vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(symbol_table, "main");
+    int i;
+    vec_hashmap_t tmp;
+    vec_foreach(&v_scopes, tmp, i)
+    {
+        printf("Scope %d\n", i);
+        printf("---------\n");
+        int j;
+        hashmap_t *tmp2;
+        vec_foreach(&tmp, tmp2, j)
+        {
+            hashmap_iterate(tmp2, show_symbol);
+            printf("\n");
+        }
+    }
 }
 
 int cmp_symbol(const void *a, const void *b)

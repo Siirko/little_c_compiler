@@ -7,27 +7,22 @@
 
 extern int yyparse();
 extern FILE *yyin;
-extern hashmap_t *symbol_table;
+extern hashmap_t *t_sym_tab;
 extern ast_t *head;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
-// extern vec_vec_hashmap_t v_scopes;
-extern hashmap_t *t_sym_tab;
 
 struct arguments arguments;
 
 void cmat_init()
 {
-    symbol_table = hashmap_init(10); // will be rezised internally if needed
+    t_sym_tab = hashmap_init(10);
     vec_init(&vec_quadr);
     vec_init(&i_if_end);
 }
 
 void cmat_free(void)
 {
-    hashmap_free(symbol_table);
-    free(symbol_table);
-
     ast_free(head);
 
     int i;
@@ -62,12 +57,6 @@ void initiate_args(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    t_sym_tab = hashmap_init(10);
-    // vec_push(&v_scopes, (vec_hashmap_t){0});
-    // vec_push(&v_scopes.data[0], hashmap_init(10));
-    // int value = 42;
-    // hashmap_insert(v_scopes.data[0].data[0], "test", &value, sizeof(int));
-    // printf("%d\n", *(int *)hashmap_get(v_scopes.data[0].data[0], "test"));
 
     initiate_args(argc, argv);
     yyin = fopen(arguments.cmat_file, "r");
@@ -81,24 +70,8 @@ int main(int argc, char *argv[])
     yyparse();
     fclose(yyin);
 
-    vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
-    int i;
-    vec_hashmap_t tmp;
-    vec_foreach(&v_scopes, tmp, i)
-    {
-        printf("Scope %d\n", i);
-        printf("---------\n");
-        int j;
-        hashmap_t *tmp2;
-        vec_foreach(&tmp, tmp2, j)
-        {
-            hashmap_iterate(tmp2, show_symbol);
-            printf("\n");
-        }
-    }
-
     if (arguments.show_symbol_table)
-        show_symbol_table(symbol_table);
+        show_symbol_table(t_sym_tab);
     if (arguments.show_abstract_syntax_tree)
         ast_show(head);
     if (arguments.show_intermediate_code)

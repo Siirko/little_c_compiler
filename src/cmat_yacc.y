@@ -20,7 +20,6 @@
 
     vec_quadr_t vec_quadr;
     ast_t *head;
-    hashmap_t* symbol_table;
     hashmap_t *t_sym_tab;
     enum data_type data_type;
     bool is_for = false;
@@ -73,7 +72,6 @@ main: datatype ID {
         // printf("%d\n\n", sym->type);
 
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_FUNCTION, &data_type, yytext, counter); 
-        add_symbol(symbol_table, TYPE_FUNCTION, &data_type, yytext, counter); 
     }
     ;
 
@@ -150,7 +148,6 @@ else: ELSE scope {
                 vec_quadr.data[index].res = strdup(tmp2);
             }
             in_if_condition = false;
-            // really needed to be done here ?
             ++labels;
         }
     }
@@ -173,7 +170,6 @@ iterator: ID {
 
 statement: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
-        add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter);
     } init {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
         $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
@@ -193,7 +189,6 @@ init: '=' expression {
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
-        add_symbol(symbol_table, TYPE_VARIABLE, &data_type, yytext, counter); 
     } 
     | { 
         $$.node = ast_new("NULL", NULL, NULL, AST_NULL); 
@@ -202,13 +197,11 @@ init: '=' expression {
 
 printf_statement: PRINTFF {
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
-        add_symbol(symbol_table, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' STR ')' ';'
     { 
         $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
         enum data_type type = TYPE_STR;
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_CONST, &data_type, yytext, counter); 
-        add_symbol(symbol_table, TYPE_CONST, &type, $4.name, counter);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr);
     }
     ;
@@ -281,7 +274,6 @@ value: NUMBER {
 
 return: RETURN { 
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
-        add_symbol(symbol_table,TYPE_KEYWORD, &data_type, yytext, counter); 
     } expression ';' {
         $$.node = ast_new("RETURN", NULL, $3.node, AST_RETURN);
     } 
@@ -314,11 +306,21 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
 }
 
 void check_variable_declaration(char* token) {
-    if(hashmap_get(symbol_table, token) == NULL)
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+    int size = v_scopes->data[depth_scope].length -1;
+    vec_hashmap_t tmp;
+    vec_foreach_iter_start_rev(v_scopes, tmp, size)
     {
-        fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
-        error_count++;
+        int j;
+        hashmap_t *tmp2;
+        vec_foreach(&tmp, tmp2, j)
+        {
+            if(hashmap_get(tmp2, token) != NULL)
+                return;
+        }
     }
+    fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
+    error_count++;
 }
 
 void yyerror(const char* msg) {
