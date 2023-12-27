@@ -306,6 +306,8 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
 }
 
 void check_variable_declaration(char* token) {
+    // Index of for loops are considered as error when used
+    // I don't know why !
     vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
     int size = v_scopes->data[depth_scope].length -1;
     vec_hashmap_t tmp;
