@@ -18,7 +18,9 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
         hashmap_t *tmp2;
         vec_foreach(tmp, tmp2, j)
         {
-            // clean empty hashmaps
+            // toss empty hashmaps because grammar is not perfect
+            // it adds empty hashmaps to symbol table when a new scopes is detected
+            // even if there's no created variables
             if (tmp2->count == 0)
             {
                 hashmap_free(tmp2);
