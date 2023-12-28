@@ -1,7 +1,8 @@
 int main()
 {
-    int zzz;
+
     int zaeazeaz;
+    int zzz;
     for (int i = 0; i < 10; i++)
     {
         int for1 = 0;

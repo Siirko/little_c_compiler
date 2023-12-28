@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
         vec_foreach(&vec_quadr, quad, i) { print_quad(quad); }
     }
 
-    mips_data_section(t_sym_tab, stdout);
+    mips_gen(t_sym_tab, &vec_quadr, stdout);
 
     cmat_free();
     return 0;

@@ -166,6 +166,7 @@ iterator: ID {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp,  &vec_quadr);
         sprintf(tmp, "t%d", temp_var++);
         quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name,  &vec_quadr);
+        temp_var = 0;
     }
 
 iterator_init: datatype ID {
@@ -174,6 +175,8 @@ iterator_init: datatype ID {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
         $$.node = ast_new("declaration", $2.node, $5.node, AST_DECLARATION);
         quadr_gencode(QUAD_TYPE_COPY, 0, $5.name, NULL, $2.name,  &vec_quadr);
+        if($5.name[0] == 't')
+            temp_var = 0;
     }
 
 statement: datatype ID {
@@ -188,6 +191,8 @@ statement: datatype ID {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
         $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
         quadr_gencode(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name,  &vec_quadr);
+        if($4.name[0] == 't')
+            temp_var = 0;
     }
     ;
 
@@ -262,7 +267,7 @@ expression: expression ADD expression {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name,  &vec_quadr);
     }
     | value { 
-        $$.node = $1.node; 
+        $$.node = $1.node;
     }
     ;
 

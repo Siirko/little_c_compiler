@@ -33,3 +33,16 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
         }
     }
 }
+
+void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
+{
+    mips_data_section(t_sym_tab, file);
+    fprintf(file, ".text\n");
+    fprintf(file, "main:\n");
+    int i;
+    quadr_t quadr;
+    vec_foreach(vec_quadr, quadr, i)
+    {
+        //
+    }
+}
