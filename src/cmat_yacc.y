@@ -199,6 +199,8 @@ statement: datatype ID {
 init: '=' expression {
         $$.node = $2.node;
         quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name,  &vec_quadr);
+        if($2.name[0] == 't')
+            temp_var = 0;
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
