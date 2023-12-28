@@ -3,6 +3,7 @@
 
 // X macros for a map with enum as key and value
 #define SYMBOL_TYPE_MAP                                                                                      \
+    X(TYPE_ITERATOR, "iterator")                                                                             \
     X(TYPE_VARIABLE, "variable")                                                                             \
     X(TYPE_CONST, "const")                                                                                   \
     X(TYPE_FUNCTION, "function")                                                                             \
@@ -26,11 +27,6 @@ enum data_type
 };
 #undef X
 
-#define X(a, b) [a] = b,
-static const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
-static const char *data_type_str[] = {DATA_TYPE_MAP};
-#undef X
-
 #define SYMBOL_MAX_SIZE 1024
 
 typedef struct symbol
@@ -41,10 +37,17 @@ typedef struct symbol
     int line;
 } symbol_t;
 
+void init_scope_key(hashmap_t *symbol_table, char *key);
+
+void add_symbol_to_scope(hashmap_t *symbol_table, int scope, char *key, enum symbol_type type,
+                         enum data_type *data_type, char *yytext, int counter);
+
 void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *data_type, char *yytext,
                 int counter);
 
 void show_symbol(char *id, void *symbol);
+
+void free_scopes(char *id, void *scopes);
 
 void show_symbol_table(hashmap_t *symbol_table);
 

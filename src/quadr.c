@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define X(a, b) [a] = b,
+const char *quad_type_str[] = {QUAD_TYPES};
+const char *quad_op_str[] = {QUAD_OPS};
+#undef X
+
 void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
                    vec_quadr_t *vec_quadruples)
 {

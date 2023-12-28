@@ -7,7 +7,7 @@
 
 extern int yyparse();
 extern FILE *yyin;
-extern hashmap_t *symbol_table;
+extern hashmap_t *t_sym_tab;
 extern ast_t *head;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
@@ -16,17 +16,15 @@ struct arguments arguments;
 
 void cmat_init()
 {
-    symbol_table = hashmap_init(10); // will be rezised internally if needed
+    t_sym_tab = hashmap_init(10);
     vec_init(&vec_quadr);
     vec_init(&i_if_end);
 }
 
 void cmat_free(void)
 {
-    hashmap_free(symbol_table);
-    free(symbol_table);
-
     ast_free(head);
+
     int i;
     quadr_t quad;
     vec_foreach(&vec_quadr, quad, i)
@@ -37,6 +35,10 @@ void cmat_free(void)
     }
     vec_deinit(&i_if_end);
     vec_deinit(&vec_quadr);
+
+    hashmap_iterate(t_sym_tab, free_scopes);
+    hashmap_free(t_sym_tab);
+    free(t_sym_tab);
 }
 
 void initiate_args(int argc, char *argv[])
@@ -55,6 +57,7 @@ void initiate_args(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+
     initiate_args(argc, argv);
     yyin = fopen(arguments.cmat_file, "r");
     if (yyin == NULL)
@@ -68,7 +71,7 @@ int main(int argc, char *argv[])
     fclose(yyin);
 
     if (arguments.show_symbol_table)
-        show_symbol_table(symbol_table);
+        show_symbol_table(t_sym_tab);
     if (arguments.show_abstract_syntax_tree)
         ast_show(head);
     if (arguments.show_intermediate_code)

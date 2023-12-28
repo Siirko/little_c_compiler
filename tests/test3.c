@@ -1,6 +1,7 @@
 int main()
 {
     int zzz;
+    int zaeazeaz;
     for (int i = 0; i < 10; i++)
     {
         int for1 = 0;
@@ -14,6 +15,10 @@ int main()
             int caca = 0;
             for1 = for1 + 1;
         }
+        for (int l = 0; l < 10; l++)
+        {
+            l = l + 1;
+        }
     }
     if (zzz == 100)
     {
@@ -21,8 +26,10 @@ int main()
     }
     else
     {
+        // l = l + 1;
         int pip = 0;
         zzz = 1;
     }
+    int zizi = 0;
     // return 2;
 }
