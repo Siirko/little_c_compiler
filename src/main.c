@@ -1,12 +1,14 @@
 #include "../include/args_parser.h"
 #include "../include/ast.h"
 #include "../include/hashmap.h"
+#include "../include/mips.h"
 #include "../include/quadr.h"
 #include "../include/symbol.h"
 #include <stdio.h>
 
 extern int yyparse();
 extern FILE *yyin;
+// hashmap<string, vector<vector<hashmap<string, symbol_t>>>> t_sym_tab;
 extern hashmap_t *t_sym_tab;
 extern ast_t *head;
 extern vec_int_t i_if_end;
@@ -80,6 +82,8 @@ int main(int argc, char *argv[])
         quadr_t quad;
         vec_foreach(&vec_quadr, quad, i) { print_quad(quad); }
     }
+
+    mips_data_section(t_sym_tab, stdout);
 
     cmat_free();
     return 0;
