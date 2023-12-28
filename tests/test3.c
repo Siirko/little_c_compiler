@@ -22,11 +22,11 @@ int main()
     }
     if (zzz == 100)
     {
-        l = l + 1;
         zzz = 0;
     }
     else
     {
+        // l = l + 1;
         int pip = 0;
         zzz = 1;
     }

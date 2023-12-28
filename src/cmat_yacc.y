@@ -323,11 +323,12 @@ void check_variable_declaration(char* token) {
         vec_hashmap_t *tmp = &v_scopes->data[i];
         for(int j = tmp->length - 1; j >= 0; --j)
         {
-            hashmap_t *tmp2 = tmp->data[j];
-            if (tmp2->count == 0)
-                continue;
-            if(hashmap_get(tmp2, token) != NULL)
+            if(hashmap_get(tmp->data[j], token) != NULL)
                 return;
+            // if we are in the current scope, we only check the last hashmap
+            // else we check all the hashmap from the last to the first
+            if(i == depth_scope)
+                break;
         }
     }
     fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
