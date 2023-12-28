@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// to remove anoying warnings inused
+// i placed this here. Same for quadr.c
+
+#define X(a, b) [a] = b,
+const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
+const char *data_type_str[] = {DATA_TYPE_MAP};
+#undef X
+
 void init_scope_key(hashmap_t *symbol_table, char *key)
 {
     // symbol_table is a hashmap<string, vector<vector<hashmap<string, symbol_t>>>>

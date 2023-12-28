@@ -27,11 +27,6 @@ enum data_type
 };
 #undef X
 
-#define X(a, b) [a] = b,
-static const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
-static const char *data_type_str[] = {DATA_TYPE_MAP};
-#undef X
-
 #define SYMBOL_MAX_SIZE 1024
 
 typedef struct symbol

@@ -49,11 +49,6 @@ enum quad_ops
 };
 #undef X
 
-#define X(a, b) [a] = b,
-static char *quad_type_str[] = {QUAD_TYPES};
-static char *quad_op_str[] = {QUAD_OPS};
-#undef X
-
 typedef struct quadr
 {
     enum quad_types type;

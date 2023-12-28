@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -Wall -g -Wno-unused-variable
+CFLAGS ?= -Wall -g
 LDLIBS ?=  
 
 EXEC = cmat
