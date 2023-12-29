@@ -5,13 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define X(a, b) [a] = b,
-const char *quad_type_str[] = {QUAD_TYPES};
-const char *quad_op_str[] = {QUAD_OPS};
-#undef X
-
-void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                   vec_quadr_t *vec_quadruples)
+void quadr_gencode_with_scope(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
+                              scope_t scope, vec_quadr_t *vec_quadruples)
 {
     quadr_t quad = {
         .type = type,
@@ -19,6 +14,24 @@ void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg
         .arg1 = arg1 != NULL ? strdup(arg1) : NULL,
         .arg2 = arg2 != NULL ? strdup(arg2) : NULL,
         .res = res != NULL ? strdup(res) : NULL,
+        // only used when
+        // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
+        .scope = scope,
+        .is_tmp = false,
+    };
+    vec_push(vec_quadruples, quad);
+}
+
+void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
+                   vec_quadr_t *vec_quadruples, bool is_tmp)
+{
+    quadr_t quad = {
+        .type = type,
+        .op = op,
+        .arg1 = arg1 != NULL ? strdup(arg1) : NULL,
+        .arg2 = arg2 != NULL ? strdup(arg2) : NULL,
+        .res = res != NULL ? strdup(res) : NULL,
+        .is_tmp = is_tmp,
     };
     vec_push(vec_quadruples, quad);
 }

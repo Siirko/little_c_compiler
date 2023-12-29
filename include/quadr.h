@@ -49,6 +49,13 @@ enum quad_ops
 };
 #undef X
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#define X(a, b) [a] = b,
+static const char *quad_type_str[] = {QUAD_TYPES};
+static const char *quad_op_str[] = {QUAD_OPS};
+#undef X
+#pragma GCC diagnostic pop
+
 typedef struct quadr
 {
     enum quad_types type;
@@ -56,12 +63,20 @@ typedef struct quadr
     char *arg1;
     char *arg2;
     char *res;
+    // only used when
+    // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
+    scope_t scope;
+    bool is_tmp;
 } quadr_t;
 
 typedef vec_t(quadr_t) vec_quadr_t;
 
+void quadr_gencode_with_scope(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
+                              scope_t scope, vec_quadr_t *vec_quadruples);
+
+// is_tmp is for the case where we want to generate a temporary variable ($t0, $t1, ...)
 void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                   vec_quadr_t *vec_quadruples);
+                   vec_quadr_t *vec_quadruples, bool is_tmp);
 
 void print_quad(quadr_t quad);
 

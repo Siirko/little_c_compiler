@@ -11,6 +11,38 @@ const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
 const char *data_type_str[] = {DATA_TYPE_MAP};
 #undef X
 
+scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key)
+{
+    scope_t scope = {
+        .depth = current_depth,
+        .width = -1,
+    };
+    // symbol_table is a hashmap<string, vector<vector<hashmap<string, symbol_t>>>>
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(symbol_table, "main");
+    int current_size_scope = v_scopes->data[current_depth].length - 1;
+    if (current_size_scope < 0)
+        return scope;
+    for (int i = current_depth; i >= 0; --i)
+    {
+        vec_hashmap_t *tmp = &v_scopes->data[i];
+        for (int j = tmp->length - 1; j >= 0; --j)
+        {
+            if (hashmap_get(tmp->data[j], key) != NULL)
+            {
+                scope.depth = i;
+                scope.width = j;
+                return scope;
+            }
+            // if we are in the current scope, we only check the last hashmap
+            // else we check all the hashmap from the last to the first
+            if (i == current_depth)
+                break;
+        }
+    }
+    // should never happen
+    return scope;
+}
+
 void init_scope_key(hashmap_t *symbol_table, char *key)
 {
     // symbol_table is a hashmap<string, vector<vector<hashmap<string, symbol_t>>>>

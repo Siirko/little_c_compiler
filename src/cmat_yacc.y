@@ -40,6 +40,7 @@
     struct node {
         char name[1024];
         struct ast* node;
+        _Bool is_temperorary;
     } node_t;
 
     struct cond_node {
@@ -92,12 +93,15 @@ body_element: for_statement
     ;
 
 scope: '{' { 
-        ++depth_scope;
-        vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
-        if (v_scopes->length - 1 < depth_scope)
-            vec_push(v_scopes, (vec_hashmap_t){0});
-        // missing a condition here
-        vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
+        if(!is_for)
+        {
+            ++depth_scope;
+            vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+            if (v_scopes->length - 1 < depth_scope)
+                vec_push(v_scopes, (vec_hashmap_t){0});
+            // missing a condition here
+            vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
+        }
     } body '}' {
         $$.node = $3.node;
         --depth_scope;
@@ -110,8 +114,8 @@ for_statement: FOR {
         ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
         ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
         $$.node = ast_new($1.name, tmp2, $10.node, AST_FOR);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, &vec_quadr);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, $6.if_block, &vec_quadr, false);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $6.else_block,  &vec_quadr, false);
     }
 
 if_statement: IF { 
@@ -119,14 +123,14 @@ if_statement: IF {
         in_if_condition = true;
         ++if_counter;
     } '(' condition ')' {
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.if_block,  &vec_quadr, false);
     } scope {
         char tmp2[1024] = {0};
         sprintf(tmp2, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp2,  &vec_quadr, false);
         if(in_if_condition)
             vec_push(&i_if_end, vec_quadr.length-1);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, $4.else_block,  &vec_quadr, false);
     }
     else {
         ast_t *tmp = ast_new($1.name, $4.node, $7.node, AST_IF);
@@ -139,7 +143,7 @@ else: ELSE scope {
         {
             char tmp2[1024] = {0};
             sprintf(tmp2, "L%d", labels);
-            quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, tmp2,  &vec_quadr);
+            quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, tmp2,  &vec_quadr, false);
             int size = i_if_end.length;
             for(int i = 0; i < size; ++i)
             {
@@ -163,20 +167,30 @@ iterator: ID {
         $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
         char tmp[1024] = {0};
         sprintf(tmp, "t%d", temp_var);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp,  &vec_quadr);
-        sprintf(tmp, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, "1", tmp, &vec_quadr, true);
+        scope_t scope = get_scope(t_sym_tab, depth_scope, $1.name);
+        quadr_gencode_with_scope(QUAD_TYPE_COPY, 0, tmp, NULL, $1.name, scope, &vec_quadr);
         temp_var = 0;
     }
 
 iterator_init: datatype ID {
+        ++depth_scope;
+        vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
+        if (v_scopes->length - 1 < depth_scope)
+            vec_push(v_scopes, (vec_hashmap_t){0});
+        // missing a condition here
+        vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_ITERATOR, &data_type, yytext, counter); 
     } '=' value {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
         $$.node = ast_new("declaration", $2.node, $5.node, AST_DECLARATION);
-        quadr_gencode(QUAD_TYPE_COPY, 0, $5.name, NULL, $2.name,  &vec_quadr);
-        if($5.name[0] == 't')
+        scope_t scope = get_scope(t_sym_tab, depth_scope, $2.name);
+        quadr_gencode_with_scope(QUAD_TYPE_COPY, 0, $5.name, NULL, $2.name, scope, &vec_quadr);
+        if($5.is_temperorary)
+        {
             temp_var = 0;
+            $5.is_temperorary = false;
+        }
     }
 
 statement: datatype ID {
@@ -185,22 +199,33 @@ statement: datatype ID {
         $2.node = ast_new($2.name, NULL, NULL, AST_ID);
         $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
         if($4.node->type == AST_NULL)
-            quadr_gencode(QUAD_TYPE_COPY, 0, "0", NULL, $2.name,  &vec_quadr);
+        {
+            scope_t scope = get_scope(t_sym_tab, depth_scope, $2.name);
+            quadr_gencode_with_scope(QUAD_TYPE_COPY, 0, "0", NULL, $2.name, scope, &vec_quadr);
+        }
     }
     | ID { check_variable_declaration($1.name); } '=' expression {
         $1.node = ast_new($1.name, NULL, NULL, AST_ID);
         $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
-        quadr_gencode(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name,  &vec_quadr);
-        if($4.name[0] == 't')
+        scope_t scope = get_scope(t_sym_tab, depth_scope, $1.name);
+        quadr_gencode_with_scope(QUAD_TYPE_COPY, 0, $4.name, NULL, $1.name, scope, &vec_quadr);
+        if($$.is_temperorary)
+        {
             temp_var = 0;
+            $$.is_temperorary = false;
+        }
     }
     ;
 
 init: '=' expression {
         $$.node = $2.node;
-        quadr_gencode(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name,  &vec_quadr);
-        if($2.name[0] == 't')
+        scope_t scope = get_scope(t_sym_tab, depth_scope, $$.name);
+        quadr_gencode_with_scope(QUAD_TYPE_COPY, 0, $2.name, NULL, $$.name, scope, &vec_quadr);
+        if($2.is_temperorary)
+        {
             temp_var = 0;
+            $2.is_temperorary = false;
+        }
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
@@ -217,7 +242,7 @@ printf_statement: PRINTFF {
         $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
         enum data_type type = TYPE_STR;
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_CONST, &type, $4.name, counter);
-        quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, $4.name, NULL, NULL,  &vec_quadr, false);
     }
     ;
 
@@ -251,22 +276,24 @@ condition: value LT value {
 expression: expression ADD expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_ADD);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, $3.name, $$.name,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, $1.name, $3.name, $$.name, &vec_quadr, true);
     }
     | expression SUBTRACT expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_SUBTRACT);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, $1.name, $3.name, $$.name,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, $1.name, $3.name, $$.name, &vec_quadr, true);
     }
     | expression MULTIPLY expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_MULTIPLY);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, $1.name, $3.name, $$.name,  &vec_quadr);
+        $$.is_temperorary = true;
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, $1.name, $3.name, $$.name, &vec_quadr, true);
     }
     | expression DIVIDE expression {
         $$.node = ast_new($2.name, $1.node, $3.node, AST_DIVIDE);
         sprintf($$.name, "t%d", temp_var++);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name,  &vec_quadr);
+        $$.is_temperorary = true;
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, $1.name, $3.name, $$.name, &vec_quadr, true);
     }
     | value { 
         $$.node = $1.node;
@@ -302,19 +329,19 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
     if(is_for)
     {
         sprintf(if_block, "L%d", labels++);
-        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, if_block,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, NULL, NULL, if_block,  &vec_quadr, false);
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_IF_NOT, op, arg1, arg2, tmp,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_IF_NOT, op, arg1, arg2, tmp,  &vec_quadr, false);
         sprintf(else_block, "L%d", labels++);
     }
     else
     {
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
-        quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_IF, op, arg1, arg2, tmp,  &vec_quadr, false);
         sprintf(tmp, "L%d\n", labels+1);
-        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp,  &vec_quadr);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, NULL, NULL, tmp,  &vec_quadr, false);
         sprintf(if_block, "L%d", labels++);
         sprintf(else_block, "L%d", labels++);
     }
