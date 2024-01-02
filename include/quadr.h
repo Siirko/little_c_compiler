@@ -56,13 +56,28 @@ static const char *quad_op_str[] = {QUAD_OPS};
 #undef X
 #pragma GCC diagnostic pop
 
+typedef struct quadr_arg
+{
+    char *val;
+    enum quadr_arg_types
+    {
+        QUADR_ARG_STR,
+        QUADR_ARG_INT,
+        QUADR_ARG_FLOAT,
+        QUADR_ARG_TMP_VAR,
+        QUADR_ARG_LABEL,
+        QUADR_ARG_GOTO,
+    } type;
+    scope_t scope;
+} quadr_arg_t;
+
 typedef struct quadr
 {
     enum quad_types type;
     enum quad_ops op;
-    char *arg1;
-    char *arg2;
-    char *res;
+    quadr_arg_t arg1;
+    quadr_arg_t arg2;
+    quadr_arg_t res;
     // only used when
     // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
     scope_t scope;
@@ -71,12 +86,11 @@ typedef struct quadr
 
 typedef vec_t(quadr_t) vec_quadr_t;
 
-void quadr_gencode_with_scope(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                              scope_t scope, vec_quadr_t *vec_quadruples);
+void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type);
 
-// is_tmp is for the case where we want to generate a temporary variable ($t0, $t1, ...)
-void quadr_gencode(enum quad_types type, enum quad_ops op, char *arg1, char *arg2, char *res,
-                   vec_quadr_t *vec_quadruples, bool is_tmp);
+void quadr_gencode(enum quad_types type, enum quad_ops op, quadr_arg_t arg1, quadr_arg_t arg2,
+                   quadr_arg_t res, vec_quadr_t *vec_quadruples, bool is_tmp, hashmap_t *t_sym_tab,
+                   int depth_scope, char *key);
 
 void print_quad(quadr_t quad);
 

@@ -45,7 +45,7 @@ typedef struct scope
 
 void init_scope_key(hashmap_t *symbol_table, char *key);
 
-scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key);
+scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *function_name);
 
 void add_symbol_to_scope(hashmap_t *symbol_table, int scope, char *key, enum symbol_type type,
                          enum data_type *data_type, char *yytext, int counter);

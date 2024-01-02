@@ -48,100 +48,201 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
 
 void mips_copy_assign(quadr_t quadr, FILE *file)
 {
-    bool arg1_int = is_str_integer(quadr.arg1);
+    bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
+    bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
+    bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
+
+    char tmp_reg[3] = "t0";
     // Debug purposes
     char buf[1024] = {0};
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
-    fprintf(file, buf, quadr.res, quadr.arg1);
+    fprintf(file, buf, quadr.res.val, quadr.arg1.val);
     ////////////////////////////////////////////////
-    if (quadr.is_tmp)
+    if (arg1_int)
+        fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
+    else if (arg1_tmp)
     {
-        if (arg1_int)
-            fprintf(file, "\tli $%s, %s\n", quadr.res, quadr.arg1);
-        else
-            fprintf(file, "\tlw $%s, $%s\n", quadr.res, quadr.arg1);
-        fprintf(file, "\tsw $%s, %s\n\n", quadr.res, quadr.res);
+        if (strcmp(quadr.arg1.val, tmp_reg) == 0)
+            tmp_reg[1]++;
+        fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
     }
     else
+        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+
+    if (res_tmp)
     {
-        // this is really bad but we will stick that
-        // and we will fix it later
-        if (quadr.arg1[0] == 't')
-            fprintf(file, "\tlw $t0, $%s\n", quadr.arg1);
-        else if (arg1_int)
-            fprintf(file, "\tli $t0, %s\n", quadr.arg1);
+        if (strcmp(quadr.res.val, tmp_reg) == 0)
+            tmp_reg[1]++;
+        if (arg1_tmp)
+            fprintf(file, "\tmove $%s, $%s\n\n", quadr.res.val, quadr.arg1.val);
         else
-            fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1, quadr.scope.depth, quadr.scope.width);
-        fprintf(file, "\tsw $t0, %s_%d_%d\n\n", quadr.res, quadr.scope.depth, quadr.scope.width);
+            fprintf(file, "\tsw $%s, $%s\n\n", tmp_reg, quadr.res.val);
     }
+    else if (arg1_tmp && !res_tmp)
+        fprintf(file, "\tsw $%s, %s_%d_%d\n\n", tmp_reg, quadr.res.val, quadr.res.scope.depth,
+                quadr.res.scope.width);
+    else
+        fprintf(file, "\tsw $t0, %s_%d_%d\n\n", quadr.res.val, quadr.res.scope.depth, quadr.res.scope.width);
 }
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
 {
-    //
-    // bool arg1_int = is_str_integer(quadr.arg1);
-    // bool arg2_int = is_str_integer(quadr.arg2);
+    bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
+    bool arg2_int = quadr.arg2.type == QUADR_ARG_INT;
+
+    bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
+    bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
+    bool arg2_tmp = quadr.arg2.type == QUADR_ARG_TMP_VAR;
+
+    char tmp_reg[3] = "t0";
 
     // Debug purposes
     char buf[1024] = {0};
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
-    fprintf(file, buf, quadr.res, quadr.arg1, quad_op_str[quadr.op], quadr.arg2);
+    fprintf(file, buf, quadr.res.val, quadr.arg1.val, quad_op_str[quadr.op], quadr.arg2.val);
     ////////////////////////////////////////////////
+
+    // loading arg1 to $t0
+    if (arg1_tmp)
+    {
+        if (strcmp(quadr.arg1.val, "t0") == 0)
+            tmp_reg[1]++;
+        fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
+        quadr.arg1.val = strdup(tmp_reg);
+    }
+    else if (arg1_int)
+        fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
+    else
+        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+
+    // loading arg2 to $t1
+    if (arg2_tmp)
+    {
+        if (strcmp(quadr.arg2.val, "t1") == 0)
+            tmp_reg[1]++;
+        fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg2.val);
+        quadr.arg2.val = strdup(tmp_reg);
+    }
+    else if (arg2_int)
+    {
+        tmp_reg[1]++;
+        fprintf(file, "\tli $%s, %s\n", tmp_reg, quadr.arg2.val);
+    }
+    else
+    {
+        tmp_reg[1]++;
+        fprintf(file, "\tlw $%s, %s_%d_%d\n", tmp_reg, quadr.arg2.val, quadr.arg2.scope.depth,
+                quadr.arg2.scope.width);
+    }
+
+    // performing operation
+    switch (quadr.op)
+    {
+    case QUAD_OP_ADD:
+    {
+        if (res_tmp && !arg1_tmp && !arg2_tmp)
+            fprintf(file, "\tadd $%s, $t0, $t1\n", quadr.res.val);
+        else if (res_tmp && arg1_tmp && !arg2_tmp)
+            fprintf(file, "\tadd $%s, $%s, $t2\n", quadr.res.val, quadr.arg1.val);
+        else if (res_tmp && !arg1_tmp && arg2_tmp)
+            fprintf(file, "\tadd $%s, $t0, $%s\n", quadr.res.val, quadr.arg2.val);
+        else if (res_tmp && arg1_tmp && arg2_tmp)
+            fprintf(file, "\tadd $%s, $%s, $%s\n", quadr.res.val, quadr.arg1.val, quadr.arg2.val);
+        break;
+    }
+    case QUAD_OP_SUB:
+    {
+        if (res_tmp)
+            fprintf(file, "\tsub $%s, $t0, $t1\n", quadr.res.val);
+        else
+            fprintf(file, "\tsub $%s, $t0, $t1\n", tmp_reg);
+        break;
+    }
+    case QUAD_OP_MUL:
+    {
+        if (res_tmp)
+            fprintf(file, "\tmul $%s, $t0, $t1\n", quadr.res.val);
+        else
+            fprintf(file, "\tmul $%s, $t0, $t1\n", tmp_reg);
+        break;
+    }
+    case QUAD_OP_DIV:
+    {
+        if (res_tmp)
+            fprintf(file, "\tdiv $%s, $t0, $t1\n", quadr.res.val);
+        else
+            fprintf(file, "\tdiv $%s, $t0, $t1\n", tmp_reg);
+        break;
+    }
+    default:
+        break;
+    }
+
+    if (arg1_tmp)
+        free(quadr.arg1.val);
+    if (arg2_tmp)
+        free(quadr.arg2.val);
 }
 
 void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
 {
     // load arg and arg2 to $t0 and $t1
-    fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1, quadr.scope.depth, quadr.scope.width);
-    fprintf(file, "\tlw $t1, %s_%d_%d\n", quadr.arg2, quadr.scope.depth, quadr.scope.width);
+    if (quadr.arg1.type == QUADR_ARG_INT)
+        fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
+    else
+        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+    if (quadr.arg2.type == QUADR_ARG_INT)
+        fprintf(file, "\tli $t1, %s\n", quadr.arg2.val);
+    else
+        fprintf(file, "\tlw $t1, %s_%d_%d\n", quadr.arg2.val, quadr.arg2.scope.depth, quadr.arg2.scope.width);
     switch (quadr.op)
     {
     case QUAD_OP_LT:
     {
         if (!is_not)
-            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     case QUAD_OP_LE:
     {
         if (!is_not)
-            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     case QUAD_OP_GT:
     {
         if (!is_not)
-            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     case QUAD_OP_GE:
     {
         if (!is_not)
-            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     case QUAD_OP_EQ:
     {
         if (!is_not)
-            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     case QUAD_OP_NE:
     {
         if (!is_not)
-            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res.val);
         else
-            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res);
+            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res.val);
         break;
     }
     default:
@@ -166,12 +267,12 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
         case QUAD_TYPE_GOTO:
         {
-            fprintf(file, "\tj %s\n", quadr.res);
+            fprintf(file, "\tj %s\n", quadr.res.val);
             break;
         }
         case QUAD_TYPE_LABEL:
         {
-            fprintf(file, quad_type_str[quadr.type], quadr.res);
+            fprintf(file, quad_type_str[quadr.type], quadr.res.val);
             break;
         }
         case QUAD_TYPE_COPY:
@@ -198,4 +299,8 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
             break;
         }
     }
+
+    // syscall to exit
+    fprintf(file, "\tli $v0, 10\n");
+    fprintf(file, "\tsyscall\n");
 }

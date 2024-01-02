@@ -11,14 +11,14 @@ const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
 const char *data_type_str[] = {DATA_TYPE_MAP};
 #undef X
 
-scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key)
+scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *function_name)
 {
     scope_t scope = {
         .depth = current_depth,
         .width = -1,
     };
     // symbol_table is a hashmap<string, vector<vector<hashmap<string, symbol_t>>>>
-    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(symbol_table, "main");
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(symbol_table, function_name);
     int current_size_scope = v_scopes->data[current_depth].length - 1;
     if (current_size_scope < 0)
         return scope;

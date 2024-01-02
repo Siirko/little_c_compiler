@@ -31,9 +31,12 @@ void cmat_free(void)
     quadr_t quad;
     vec_foreach(&vec_quadr, quad, i)
     {
-        free(quad.arg1);
-        free(quad.arg2);
-        free(quad.res);
+        if (quad.arg1.val != NULL)
+            free(quad.arg1.val);
+        if (quad.arg2.val != NULL)
+            free(quad.arg2.val);
+        if (quad.res.val != NULL)
+            free(quad.res.val);
     }
     vec_deinit(&i_if_end);
     vec_deinit(&vec_quadr);
