@@ -37,7 +37,7 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
                 if (!hashmap_iter_has_next(&iter))
                     continue;
                 symbol_t *symbol = (symbol_t *)iter.node->value;
-                if (symbol->type == TYPE_VARIABLE)
+                if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR)
                 {
                     fprintf(file, "\t%s_%d_%d: .word 0\n", symbol->id, i, j);
                 }
@@ -76,6 +76,78 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     }
 }
 
+void mips_binary_assign(quadr_t quadr, FILE *file)
+{
+    //
+    // bool arg1_int = is_str_integer(quadr.arg1);
+    // bool arg2_int = is_str_integer(quadr.arg2);
+
+    // Debug purposes
+    char buf[1024] = {0};
+    sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
+    fprintf(file, buf, quadr.res, quadr.arg1, quad_op_str[quadr.op], quadr.arg2);
+    ////////////////////////////////////////////////
+}
+
+void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
+{
+    // load arg and arg2 to $t0 and $t1
+    fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1, quadr.scope.depth, quadr.scope.width);
+    fprintf(file, "\tlw $t1, %s_%d_%d\n", quadr.arg2, quadr.scope.depth, quadr.scope.width);
+    switch (quadr.op)
+    {
+    case QUAD_OP_LT:
+    {
+        if (!is_not)
+            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    case QUAD_OP_LE:
+    {
+        if (!is_not)
+            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    case QUAD_OP_GT:
+    {
+        if (!is_not)
+            fprintf(file, "\tbgt $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tble $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    case QUAD_OP_GE:
+    {
+        if (!is_not)
+            fprintf(file, "\tbge $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tblt $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    case QUAD_OP_EQ:
+    {
+        if (!is_not)
+            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    case QUAD_OP_NE:
+    {
+        if (!is_not)
+            fprintf(file, "\tbne $t0, $t1, %s\n", quadr.res);
+        else
+            fprintf(file, "\tbeq $t0, $t1, %s\n", quadr.res);
+        break;
+    }
+    default:
+        break;
+    }
+}
 // void (*mips_gen_func[])(quadr_t, FILE *) = {
 //     [QUAD_TYPE_COPY] = mips_copy_assign,
 //     [QUAD_TYPE_BINARY_ASSIGN] = mips_binary_assign,
@@ -92,9 +164,34 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
     {
         switch (quadr.type)
         {
+        case QUAD_TYPE_GOTO:
+        {
+            fprintf(file, "\tj %s\n", quadr.res);
+            break;
+        }
+        case QUAD_TYPE_LABEL:
+        {
+            fprintf(file, quad_type_str[quadr.type], quadr.res);
+            break;
+        }
         case QUAD_TYPE_COPY:
         {
             mips_copy_assign(quadr, file);
+            break;
+        }
+        case QUAD_TYPE_BINARY_ASSIGN:
+        {
+            mips_binary_assign(quadr, file);
+            break;
+        }
+        case QUAD_TYPE_IF:
+        {
+            mips_if_assign(quadr, file, false);
+            break;
+        }
+        case QUAD_TYPE_IF_NOT:
+        {
+            mips_if_assign(quadr, file, true);
             break;
         }
         default:
