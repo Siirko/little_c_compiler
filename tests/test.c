@@ -9,7 +9,7 @@ int main()
     {
         a = a + 1;
     }
-    a = 3;
+    printf("Ok");
     // if (x > y)
     // {
     //     x = 1 + x;

@@ -22,9 +22,9 @@
     X(QUAD_TYPE_PARAM, "param %s\n")                                                                         \
     X(QUAD_TYPE_CALL, "call %s, %s\n")                                                                       \
     X(QUAD_TYPE_LABEL, "\n%s:\n")                                                                            \
-    X(QUAD_TYPE_SYSCALL_PRINT_STR, "print_str %s\n")                                                         \
-    X(QUAD_TYPE_SYSCALL_PRINT_INT, "print_int %s\n")                                                         \
-    X(QUAD_TYPE_SYSCALL_PRINT_FLOAT, "print_float %s\n")
+    X(QUAD_TYPE_SYSCALL_PRINT_STR, "print_str(%s)\n")                                                        \
+    X(QUAD_TYPE_SYSCALL_PRINT_INT, "print_int(%s)\n")                                                        \
+    X(QUAD_TYPE_SYSCALL_PRINT_FLOAT, "print_float(%s)\n")
 
 #define QUAD_OPS                                                                                             \
     X(QUAD_OP_ADD, "+")                                                                                      \

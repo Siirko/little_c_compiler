@@ -46,6 +46,18 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
     }
 }
 
+void mips_macro_print_str(FILE *file)
+{
+    fprintf(file, ".macro print_str(%%str)\n"
+                  ".data\n"
+                  "str: .asciiz %%str\n"
+                  ".text\n"
+                  "li $v0, 4\n"
+                  "la $a0, str\n"
+                  "syscall\n"
+                  ".end_macro\n\n");
+}
+
 void mips_copy_assign(quadr_t quadr, FILE *file)
 {
     bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
@@ -256,6 +268,7 @@ void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
 
 void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
 {
+    mips_macro_print_str(file);
     mips_data_section(t_sym_tab, file);
     fprintf(file, ".text\n");
     fprintf(file, "main:\n");
@@ -294,6 +307,12 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             mips_if_assign(quadr, file, true);
             break;
+        }
+        case QUAD_TYPE_SYSCALL_PRINT_STR:
+        {
+            char buf[1024] = {0};
+            sprintf(buf, "\t%s", quad_type_str[quadr.type]);
+            fprintf(file, buf, quadr.arg1.val);
         }
         default:
             break;
