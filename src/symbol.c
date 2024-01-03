@@ -27,6 +27,14 @@ scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *f
         vec_hashmap_t *tmp = &v_scopes->data[i];
         for (int j = tmp->length - 1; j >= 0; --j)
         {
+            // toss empty hashmaps because grammar is not perfect
+            if (tmp->data[j]->count == 0)
+            {
+                hashmap_free(tmp->data[j]);
+                free(tmp->data[j]);
+                vec_splice(tmp, j, 1);
+                continue;
+            }
             if (hashmap_get(tmp->data[j], key) != NULL)
             {
                 scope.depth = i;

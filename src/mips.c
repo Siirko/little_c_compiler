@@ -23,13 +23,14 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
             // toss empty hashmaps because grammar is not perfect
             // it adds empty hashmaps to symbol table when a new scopes is detected
             // even if there's no created variables
-            if (tmp2->count == 0)
-            {
-                hashmap_free(tmp2);
-                free(tmp2);
-                vec_splice(tmp, j, 1);
-                continue;
-            }
+            // if (tmp2->count == 0)
+            // {
+            //     hashmap_free(tmp2);
+            //     free(tmp2);
+            //     vec_splice(tmp, j, 1);
+            //     j--;
+            //     continue;
+            // }
             hashmap_iter_t iter = {0};
             hashmap_iter_init(&iter, tmp2);
             do
