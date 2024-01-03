@@ -9,13 +9,14 @@ int main()
     {
         a = a + 1;
     }
-    if (x > y)
-    {
-        x = 1 + x;
-    }
-    else
-    {
-        y = 1 + y;
-    }
+    printf("Ok");
+    // if (x > y)
+    // {
+    //     x = 1 + x;
+    // }
+    // else
+    // {
+    //     y = 1 + y;
+    // }
     return 2;
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -42,4 +43,17 @@ noreturn static inline void raler(int syserr, const char *format, ...)
     if (syserr == 1)
         perror("");
     exit(EXIT_FAILURE);
+}
+
+static inline _Bool is_str_integer(const char *str)
+{
+    //
+    const char *ptr = str;
+    while (*ptr != '\0')
+    {
+        if (!isdigit(*ptr))
+            return 0;
+        ptr++;
+    }
+    return 1;
 }

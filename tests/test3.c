@@ -1,7 +1,8 @@
 int main()
 {
-    int zzz;
+
     int zaeazeaz;
+    int zzz;
     for (int i = 0; i < 10; i++)
     {
         int for1 = 0;
@@ -22,7 +23,7 @@ int main()
     }
     if (zzz == 100)
     {
-        zzz = 0;
+        zzz = 1 + zzz;
     }
     else
     {
@@ -30,6 +31,10 @@ int main()
         int pip = 0;
         zzz = 1;
     }
+    print(zzz);
+    printf("\n");
+    printf("\n");
+    printf("AAAAAAAAAAAAA\n");
     int zizi = 0;
     // return 2;
 }
