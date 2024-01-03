@@ -50,8 +50,8 @@
     } cond_node_t;
 }
 
-%token <node_t>  PRINTFF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> iterator iterator_init printf_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
+%token <node_t>  PRINT PRINTF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
+%type <node_t> iterator iterator_init printf_statement print_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
 %type <cond_node_t> condition
 %left ADD SUBTRACT MULTIPLY DIVIDE
 
@@ -90,6 +90,7 @@ body_element: for_statement
     | if_statement
     | statement ';' { $$.node = $1.node; }
     | printf_statement
+    | print_statement
     ;
 
 scope: '{' { 
@@ -283,7 +284,7 @@ init: '=' expression {
     }
     ;
 
-printf_statement: PRINTFF {
+printf_statement: PRINTF {
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' STR ')' ';'
     { 
@@ -293,6 +294,36 @@ printf_statement: PRINTFF {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $4.name, QUADR_ARG_STR);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, false, t_sym_tab, depth_scope, "main");
+    }
+    ;
+
+print_statement: PRINT {
+        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_KEYWORD, &data_type, yytext, counter); 
+    } '(' ID { check_variable_declaration($1.name); } ')' ';' 
+    {
+        $$.node = ast_new("print", NULL, NULL, AST_LIB_FUNCTION);
+        quadr_arg_t arg1 = {0};
+        switch(data_type)
+        {
+            case TYPE_INT:
+            {
+                quadr_init_arg(&arg1, $4.name, QUADR_ARG_INT);
+                quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_INT, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, false, t_sym_tab, depth_scope, "main");
+                break;
+            }
+            case TYPE_FLOAT:
+            {
+                quadr_init_arg(&arg1, $4.name, QUADR_ARG_FLOAT);
+                quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_FLOAT, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, false, t_sym_tab, depth_scope, "main");
+                break;
+            }
+            default:
+            {
+                fprintf(stderr, "Error: can't print %s at line %d\n", $4.name, counter);
+                error_count++;
+                break;
+            }
+        }
     }
     ;
 

@@ -13,7 +13,8 @@ unary "++"|"--"
 
 %%
 
-"printf"                    { strncpy(yylval.node_t.name, yytext, 1024); return PRINTFF; }
+"printf"                    { strncpy(yylval.node_t.name, yytext, 1024); return PRINTF; }
+"print"                    { strncpy(yylval.node_t.name, yytext, 1024); return PRINT; }
 "int"                       { strncpy(yylval.node_t.name, yytext, 1024); return INT; }
 "float"                     { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT; }
 

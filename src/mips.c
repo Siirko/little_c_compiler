@@ -59,6 +59,15 @@ void mips_macro_print_str(FILE *file)
                   ".end_macro\n\n");
 }
 
+void mips_macro_print_int(FILE *file)
+{
+    fprintf(file, ".macro print_int (%%x)\n"
+                  "li $v0, 1\n"
+                  "add $a0, $zero, %%x\n"
+                  "syscall\n"
+                  ".end_macro\n\n");
+}
+
 void mips_copy_assign(quadr_t quadr, FILE *file)
 {
     bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
@@ -270,6 +279,7 @@ void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
 void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
 {
     mips_macro_print_str(file);
+    mips_macro_print_int(file);
     mips_data_section(t_sym_tab, file);
     fprintf(file, ".text\n");
     fprintf(file, "main:\n");
@@ -307,6 +317,18 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         case QUAD_TYPE_IF_NOT:
         {
             mips_if_assign(quadr, file, true);
+            break;
+        }
+        case QUAD_TYPE_SYSCALL_PRINT_INT:
+        {
+            if (quadr.arg1.type == QUADR_ARG_INT)
+            {
+                fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth,
+                        quadr.arg1.scope.width);
+                fprintf(file, "\tprint_int($t0)\n");
+            }
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\tprint_int($%s)\n", quadr.arg1.val);
             break;
         }
         case QUAD_TYPE_SYSCALL_PRINT_STR:

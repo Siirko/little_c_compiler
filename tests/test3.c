@@ -23,7 +23,7 @@ int main()
     }
     if (zzz == 100)
     {
-        zzz = 0;
+        zzz = 1 + zzz;
     }
     else
     {
@@ -31,6 +31,10 @@ int main()
         int pip = 0;
         zzz = 1;
     }
+    print(zzz);
+    printf("\n");
+    printf("\n");
+    printf("AAAAAAAAAAAAA\n");
     int zizi = 0;
     // return 2;
 }

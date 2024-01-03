@@ -6,10 +6,11 @@
 const char *argp_program_version = "Alexander Yanovskyy\nBenjamin Metzger\nJulien Brelot\nLoïc Herlin";
 
 /* Program documentation. */
-static char doc[] = "Little compiler for a subset of C language.\n";
+static char doc[] = "Little MIPS compiler for a subset of C language.\n";
 
 /* The options we understand. */
 static struct argp_option options[] = {{"cmat_file", 'f', "CMAT_FILE", 0, "", 0},
+                                       {"output_file", 'o', "OUTPUT_FILE", 0, "MIPS Assembly file", 0},
                                        {"tos", 's', 0, 0, "Show Symbol table", 0},
                                        {"interm_code", 'i', 0, 0, "Show Intermediate code", 0},
                                        {"ast", 'a', 0, 0, "Show Abstract Syntax tree", 0},
@@ -20,6 +21,7 @@ typedef struct arguments
 {
     // char *args[2];                /* arg1 & arg2 */
     char *cmat_file;
+    char *output_file;
     bool show_symbol_table;
     bool show_intermediate_code;
     bool show_abstract_syntax_tree;
@@ -52,6 +54,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         break;
     case 'f':
         arguments->cmat_file = arg;
+        break;
+    case 'o':
+        arguments->output_file = arg;
         break;
     default:
         return ARGP_ERR_UNKNOWN;
