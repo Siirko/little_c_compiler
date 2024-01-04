@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
@@ -47,13 +48,15 @@ noreturn static inline void raler(int syserr, const char *format, ...)
 
 static inline _Bool is_str_integer(const char *str)
 {
-    //
-    const char *ptr = str;
-    while (*ptr != '\0')
-    {
-        if (!isdigit(*ptr))
-            return 0;
-        ptr++;
-    }
-    return 1;
+    char *endptr;
+    errno = 0;
+    strtol(str, &endptr, 10);
+    if (errno == ERANGE)
+        return false;
+    if (endptr == str)
+        return false;
+    for (; *endptr != '\0'; endptr++)
+        if (!isspace(*endptr))
+            return false;
+    return true;
 }
