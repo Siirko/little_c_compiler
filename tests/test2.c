@@ -4,10 +4,12 @@ int main()
     float f;
     int a = 3;
     a = x * 3 + 5;
+    print(a);
     if (x < a)
     {
         printf("Hi!");
         a = x * 3 + 100;
+        print(a);
         if (x < a)
         {
             printf("Hi!");
@@ -36,6 +38,7 @@ int main()
             x = -12;
         }
     }
+    print(a);
     int zzzzzzzzzzzz = 0;
     if (zzzzzzzzzzzz > 3)
     {
