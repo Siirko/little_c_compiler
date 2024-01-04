@@ -23,6 +23,7 @@
     hashmap_t *t_sym_tab;
     enum data_type data_type;
     bool is_for = false;
+    bool is_while = false;
     bool in_if_condition = false;
     extern int counter;
     int error_count = 0;
@@ -50,9 +51,19 @@
     } cond_node_t;
 }
 
-%token <node_t>  PRINT PRINTF INT FLOAT FOR IF ELSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT STR ADD MULTIPLY DIVIDE SUBTRACT UNARY RETURN 
-%type <node_t> iterator iterator_init printf_statement print_statement main body scope return datatype expression statement init value program else body_element for_statement if_statement
-%type <cond_node_t> condition
+%token <node_t>  PRINT PRINTF 
+%token <node_t>  ID STR INT FLOAT FLOAT_NUM NUMBER
+%token <node_t>   IF ELSE LE GE EQ NE GT LT
+%token <node_t> ADD MULTIPLY DIVIDE SUBTRACT UNARY
+%token <node_t> FOR WHILE RETURN
+
+%type <node_t> iterator iterator_init 
+%type <node_t> printf_statement print_statement
+%type <node_t> program main body scope return
+%type <node_t> datatype expression init value
+%type <node_t> statement body_element for_statement while_statement if_statement else
+
+%type <cond_node_t> condition 
 %left ADD SUBTRACT MULTIPLY DIVIDE
 
 %%
@@ -87,6 +98,7 @@ body: body_element
 
 
 body_element: for_statement
+    | while_statement
     | if_statement
     | statement ';' { $$.node = $1.node; }
     | printf_statement
@@ -109,6 +121,23 @@ scope: '{' {
         clear_empty_hashmaps(t_sym_tab, depth_scope+1, "main");
     }
     ;
+
+while_statement: WHILE { 
+        is_while = true; 
+    } '(' condition ')' {
+       
+    } scope {
+
+
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO);
+        quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, "main");
+
+        res = (quadr_arg_t){0};
+        quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL);
+        quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr, false, t_sym_tab, depth_scope, "main");
+        is_while = false;
+    }
 
 for_statement: FOR { 
         is_for = true;
@@ -465,7 +494,7 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
     quadr_init_arg(&_arg2, arg2, QUADR_ARG_STR);
 
 
-    if(is_for)
+    if(is_for || is_while)
     {
         sprintf(if_block, "L%d", labels++);
         quadr_arg_t res = {0};
