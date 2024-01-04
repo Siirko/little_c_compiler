@@ -11,6 +11,21 @@ const char *symbol_type_str[] = {SYMBOL_TYPE_MAP};
 const char *data_type_str[] = {DATA_TYPE_MAP};
 #undef X
 
+void clear_empty_hashmaps(hashmap_t *symbol_table, int current_depth, char *function_name)
+{
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(symbol_table, function_name);
+    vec_hashmap_t *tmp = &v_scopes->data[current_depth];
+    for (int i = tmp->length - 1; i >= 0; --i)
+    {
+        if (tmp->data[i]->count == 0)
+        {
+            hashmap_free(tmp->data[i]);
+            free(tmp->data[i]);
+            vec_splice(tmp, i, 1);
+        }
+    }
+}
+
 scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *function_name)
 {
     scope_t scope = {
@@ -22,19 +37,12 @@ scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *f
     int current_size_scope = v_scopes->data[current_depth].length - 1;
     if (current_size_scope < 0)
         return scope;
+    // clear_hashmap(v_scopes, current_depth);
     for (int i = current_depth; i >= 0; --i)
     {
         vec_hashmap_t *tmp = &v_scopes->data[i];
         for (int j = tmp->length - 1; j >= 0; --j)
         {
-            // toss empty hashmaps because grammar is not perfect
-            if (tmp->data[j]->count == 0)
-            {
-                hashmap_free(tmp->data[j]);
-                free(tmp->data[j]);
-                vec_splice(tmp, j, 1);
-                continue;
-            }
             if (hashmap_get(tmp->data[j], key) != NULL)
             {
                 scope.depth = i;

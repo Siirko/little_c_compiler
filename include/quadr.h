@@ -68,6 +68,8 @@ typedef struct quadr_arg
         QUADR_ARG_LABEL,
         QUADR_ARG_GOTO,
     } type;
+    // only used when
+    // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
     scope_t scope;
 } quadr_arg_t;
 
@@ -78,9 +80,6 @@ typedef struct quadr
     quadr_arg_t arg1;
     quadr_arg_t arg2;
     quadr_arg_t res;
-    // only used when
-    // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
-    scope_t scope;
     bool is_tmp;
 } quadr_t;
 

@@ -34,7 +34,6 @@ void quadr_gencode(enum quad_types type, enum quad_ops op, quadr_arg_t arg1, qua
         .arg1 = arg1,
         .arg2 = arg2,
         .res = res,
-        .scope = is_scope_needed ? get_scope(t_sym_tab, depth_scope, arg1.val, key) : (scope_t){-1, -1},
     };
     vec_push(vec_quadruples, quad);
 }

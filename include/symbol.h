@@ -43,6 +43,8 @@ typedef struct scope
     int width;
 } scope_t;
 
+void clear_empty_hashmaps(hashmap_t *symbol_table, int current_depth, char *function_name);
+
 void init_scope_key(hashmap_t *symbol_table, char *key);
 
 scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *function_name);
