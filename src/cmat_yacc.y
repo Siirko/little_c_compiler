@@ -280,6 +280,14 @@ init: '=' expression {
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_VARIABLE, &data_type, yytext, counter); 
+        $$.node = ast_new($2.name, NULL, NULL, AST_ID);
+        quadr_arg_t arg1 = {0};
+        quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
+        
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, $2.name, QUADR_ARG_STR);
+        
+        quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, "main");
     } 
     | { 
         $$.node = ast_new("NULL", NULL, NULL, AST_NULL); 
