@@ -106,6 +106,7 @@ scope: '{' {
     } body '}' {
         $$.node = $3.node;
         --depth_scope;
+        clear_empty_hashmaps(t_sym_tab, depth_scope+1, "main");
     }
     ;
 
