@@ -253,11 +253,12 @@ statement: datatype ID {
         quadr_init_arg(&res, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
 
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, "main");
-        if($$.is_temperorary)
-        {
+        if($4.is_temperorary || $1.is_temperorary)
             temp_var = 0;
-            $$.is_temperorary = false;
-        }
+        if($4.is_temperorary)
+            $4.is_temperorary = false;
+        if($1.is_temperorary)
+            $1.is_temperorary = false;
     }
     ;
 
