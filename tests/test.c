@@ -1,6 +1,7 @@
 int main()
 {
-    int zzz, yyy;
+    int zzz, yyy, xxx;
+    int ewrrwerwer;
     int x = 1;
     int y = 2;
     int z = 3 + x + y;

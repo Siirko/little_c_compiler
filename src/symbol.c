@@ -31,6 +31,7 @@ scope_t get_scope(hashmap_t *symbol_table, int current_depth, char *key, char *f
     scope_t scope = {
         .depth = current_depth,
         .width = -1,
+        .function_name = strdup(function_name),
     };
     // symbol_table is a hashmap<string, vector<vector<hashmap<string, symbol_t>>>>
     vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(symbol_table, function_name);
@@ -125,26 +126,35 @@ void show_symbol(char *id, void *symbol)
 
 void show_symbol_table(hashmap_t *symbol_table)
 {
-    printf("%-10s%-10s%-10s%-10s\n", "ID", "TYPE", "DATA_TYPE", "LINE");
-    vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(symbol_table, "main");
-    int i;
-    vec_hashmap_t tmp;
-    vec_foreach(&v_scopes, tmp, i)
+    hashmap_iter_t iter = {0};
+    hashmap_iter_init(&iter, symbol_table);
+    do
     {
-        if (tmp.length == 0)
+        if (!hashmap_iter_has_next(&iter))
             continue;
-        printf("Scope %d\n", i);
-        printf("---------\n");
-        int j;
-        hashmap_t *tmp2;
-        vec_foreach(&tmp, tmp2, j)
+        char *key = iter.node->key;
+        printf("Function: %s\n", key);
+        vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(symbol_table, key);
+        int i;
+        vec_hashmap_t tmp;
+        printf("%-10s%-10s%-10s%-10s\n", "ID", "TYPE", "DATA_TYPE", "LINE");
+        vec_foreach(&v_scopes, tmp, i)
         {
-            if (tmp2->count == 0)
+            if (tmp.length == 0)
                 continue;
-            hashmap_iterate(tmp2, show_symbol);
-            printf("\n");
+            printf("Scope %d\n", i);
+            printf("---------\n");
+            int j;
+            hashmap_t *tmp2;
+            vec_foreach(&tmp, tmp2, j)
+            {
+                if (tmp2->count == 0)
+                    continue;
+                hashmap_iterate(tmp2, show_symbol);
+                printf("\n");
+            }
         }
-    }
+    } while (hashmap_iter_next(&iter));
 }
 
 int cmp_symbol(const void *a, const void *b)

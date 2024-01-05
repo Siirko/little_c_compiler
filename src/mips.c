@@ -9,42 +9,51 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
     // hashmap<string, vector<vector<hashmap<string, symbol_t>>>> t_sym_tab;
 
     // we focus only on "main" function, but in the future it will be changed
-    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main");
-    vec_hashmap_t *tmp;
-    for (int i = 0; i < v_scopes->length; i++)
+    /*= (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, "main") */;
+    hashmap_iter_t iter = {0};
+    hashmap_iter_init(&iter, t_sym_tab);
+    do
     {
-        tmp = &v_scopes->data[i];
-        if (tmp->length == 0)
+        if (!hashmap_iter_has_next(&iter))
             continue;
-        int j;
-        hashmap_t *tmp2;
-        vec_foreach(tmp, tmp2, j)
+        vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)iter.node->value;
+        char *function_scope = iter.node->key;
+        vec_hashmap_t *tmp;
+        for (int i = 0; i < v_scopes->length; i++)
         {
-            // toss empty hashmaps because grammar is not perfect
-            // it adds empty hashmaps to symbol table when a new scopes is detected
-            // even if there's no created variables
-            // if (tmp2->count == 0)
-            // {
-            //     hashmap_free(tmp2);
-            //     free(tmp2);
-            //     vec_splice(tmp, j, 1);
-            //     j--;
-            //     continue;
-            // }
-            hashmap_iter_t iter = {0};
-            hashmap_iter_init(&iter, tmp2);
-            do
+            tmp = &v_scopes->data[i];
+            if (tmp->length == 0)
+                continue;
+            int j;
+            hashmap_t *tmp2;
+            vec_foreach(tmp, tmp2, j)
             {
-                if (!hashmap_iter_has_next(&iter))
-                    continue;
-                symbol_t *symbol = (symbol_t *)iter.node->value;
-                if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR)
+                // toss empty hashmaps because grammar is not perfect
+                // it adds empty hashmaps to symbol table when a new scopes is detected
+                // even if there's no created variables
+                // if (tmp2->count == 0)
+                // {
+                //     hashmap_free(tmp2);
+                //     free(tmp2);
+                //     vec_splice(tmp, j, 1);
+                //     j--;
+                //     continue;
+                // }
+                hashmap_iter_t iter = {0};
+                hashmap_iter_init(&iter, tmp2);
+                do
                 {
-                    fprintf(file, "\t%s_%d_%d: .word 0\n", symbol->id, i, j);
-                }
-            } while (hashmap_iter_next(&iter));
+                    if (!hashmap_iter_has_next(&iter))
+                        continue;
+                    symbol_t *symbol = (symbol_t *)iter.node->value;
+                    if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR)
+                    {
+                        fprintf(file, "\t%s_%s_%d_%d: .word 0\n", symbol->id, function_scope, i, j);
+                    }
+                } while (hashmap_iter_next(&iter));
+            }
         }
-    }
+    } while (hashmap_iter_next(&iter));
 }
 
 void mips_macro_print_str(FILE *file)
@@ -63,6 +72,14 @@ void mips_macro_print_int(FILE *file)
 {
     fprintf(file, ".macro print_int (%%x)\n"
                   "li $v0, 1\n"
+                  "add $a0, $zero, %%x\n"
+                  "syscall\n"
+                  ".end_macro\n\n");
+}
+void mips_macro_exit(FILE *file)
+{
+    fprintf(file, ".macro exit(%%x)\n"
+                  "li $v0, 17\n"
                   "add $a0, $zero, %%x\n"
                   "syscall\n"
                   ".end_macro\n\n");
@@ -89,7 +106,8 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
     }
     else
-        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+        fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                quadr.arg1.scope.depth, quadr.arg1.scope.width);
 
     if (res_tmp)
     {
@@ -101,10 +119,11 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
             fprintf(file, "\tsw $%s, $%s\n\n", tmp_reg, quadr.res.val);
     }
     else if (arg1_tmp && !res_tmp)
-        fprintf(file, "\tsw $%s, %s_%d_%d\n\n", tmp_reg, quadr.res.val, quadr.res.scope.depth,
-                quadr.res.scope.width);
+        fprintf(file, "\tsw $%s, %s_%s_%d_%d\n\n", tmp_reg, quadr.res.val, quadr.res.scope.function_name,
+                quadr.res.scope.depth, quadr.res.scope.width);
     else
-        fprintf(file, "\tsw $t0, %s_%d_%d\n\n", quadr.res.val, quadr.res.scope.depth, quadr.res.scope.width);
+        fprintf(file, "\tsw $t0, %s_%s_%d_%d\n\n", quadr.res.val, quadr.res.scope.function_name,
+                quadr.res.scope.depth, quadr.res.scope.width);
 }
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
@@ -135,7 +154,8 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     else if (arg1_int)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else
-        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+        fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                quadr.arg1.scope.depth, quadr.arg1.scope.width);
 
     // loading arg2 to $t1
     if (arg2_tmp)
@@ -153,8 +173,8 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     else
     {
         tmp_reg[1]++;
-        fprintf(file, "\tlw $%s, %s_%d_%d\n", tmp_reg, quadr.arg2.val, quadr.arg2.scope.depth,
-                quadr.arg2.scope.width);
+        fprintf(file, "\tlw $%s, %s_%s_%d_%d\n", tmp_reg, quadr.arg2.val, quadr.arg2.scope.function_name,
+                quadr.arg2.scope.depth, quadr.arg2.scope.width);
     }
 
     // performing operation
@@ -212,11 +232,13 @@ void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
     if (quadr.arg1.type == QUADR_ARG_INT)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else
-        fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+        fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                quadr.arg1.scope.depth, quadr.arg1.scope.width);
     if (quadr.arg2.type == QUADR_ARG_INT)
         fprintf(file, "\tli $t1, %s\n", quadr.arg2.val);
     else
-        fprintf(file, "\tlw $t1, %s_%d_%d\n", quadr.arg2.val, quadr.arg2.scope.depth, quadr.arg2.scope.width);
+        fprintf(file, "\tlw $t1, %s_%s_%d_%d\n", quadr.arg2.val, quadr.arg2.scope.function_name,
+                quadr.arg2.scope.depth, quadr.arg2.scope.width);
     switch (quadr.op)
     {
     case QUAD_OP_LT:
@@ -280,18 +302,43 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
 {
     mips_macro_print_str(file);
     mips_macro_print_int(file);
+    mips_macro_exit(file);
     mips_data_section(t_sym_tab, file);
-    fprintf(file, ".text\n");
-    fprintf(file, "main:\n");
+    fprintf(file, ".text\n"
+                  ".globl main\n");
+    int function_arg_index = -1;
     int i;
     quadr_t quadr;
     vec_foreach(vec_quadr, quadr, i)
     {
         switch (quadr.type)
         {
+        case QUAD_TYPE_PARAM_FUNCTION:
+        {
+            fprintf(file, "\tsw $a%d, %s_%s_%d_%d\n", ++function_arg_index, quadr.arg1.val,
+                    quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+            break;
+        }
+        case QUAD_TYPE_RETURN_FUNCTION:
+        {
+            if (quadr.arg1.type == QUADR_ARG_INT)
+                fprintf(file, "\tli $v0, %s\n", quadr.arg1.val);
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\tmove $v0, $%s\n", quadr.arg1.val);
+            else
+                fprintf(file, "\tlw $v0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                        quadr.arg1.scope.depth, quadr.arg1.scope.width);
+            fprintf(file, "\tjr $ra\n");
+            break;
+        }
         case QUAD_TYPE_GOTO:
         {
             fprintf(file, "\tj %s\n", quadr.res.val);
+            break;
+        }
+        case QUAD_TYPE_LABEL_FUNCTION:
+        {
+            fprintf(file, "%s:\n", quadr.res.val);
             break;
         }
         case QUAD_TYPE_LABEL:
@@ -323,12 +370,26 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             if (quadr.arg1.type == QUADR_ARG_INT)
             {
-                fprintf(file, "\tlw $t0, %s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.depth,
-                        quadr.arg1.scope.width);
+                fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                        quadr.arg1.scope.depth, quadr.arg1.scope.width);
                 fprintf(file, "\tprint_int($t0)\n");
             }
             else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
                 fprintf(file, "\tprint_int($%s)\n", quadr.arg1.val);
+            break;
+        }
+        case QUAD_TYPE_RETURN_MAIN:
+        {
+            if (quadr.arg1.type == QUADR_ARG_STR)
+            {
+                fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                        quadr.arg1.scope.depth, quadr.arg1.scope.width);
+                fprintf(file, "\texit($t0)\n");
+            }
+            else if (quadr.arg1.type == QUADR_ARG_INT)
+                fprintf(file, "\texit(%s)\n", quadr.arg1.val);
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\texit($%s)\n", quadr.arg1.val);
             break;
         }
         case QUAD_TYPE_SYSCALL_PRINT_STR:
@@ -341,8 +402,4 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
             break;
         }
     }
-
-    // syscall to exit
-    fprintf(file, "\tli $v0, 10\n");
-    fprintf(file, "\tsyscall\n");
 }

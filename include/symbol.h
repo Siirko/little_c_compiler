@@ -41,6 +41,7 @@ typedef struct scope
 {
     int depth;
     int width;
+    char *function_name;
 } scope_t;
 
 void clear_empty_hashmaps(hashmap_t *symbol_table, int current_depth, char *function_name);

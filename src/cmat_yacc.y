@@ -39,6 +39,7 @@
         char name[1024];
         _Bool is_temperorary;
         _Bool is_null;
+        _Bool is_variable;
     } node_t;
 
     struct cond_node {
@@ -56,8 +57,8 @@
 %type <node_t> iterator iterator_init 
 %type <node_t> printf_statement print_statement
 %type <node_t> program body scope return
-%type <node_t> function function_args
-%type <node_t> datatype expression init value
+%type <node_t> function function_args function_arg
+%type <node_t> datatype expression init inits value
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
 %type <cond_node_t> condition 
@@ -73,20 +74,30 @@ function: datatype ID {
         init_scope_key(t_sym_tab, $2.name);
         add_symbol_to_scope(t_sym_tab, depth_scope, $2.name, TYPE_FUNCTION, &data_type, yytext, counter);
         sprintf(current_function, "%s", $2.name);
+        
+        _Bool is_main = strcmp(current_function, "main") == 0;
+
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, current_function, QUADR_ARG_LABEL);
+        quadr_gencode(is_main ? QUAD_TYPE_LABEL : QUAD_TYPE_LABEL_FUNCTION, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, 
+                        res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
         depth_scope = 0;
     } '(' function_args ')' '{' body return '}'
     ;
 
-function_args: %empty
-    | datatype ID {
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
-    } ',' function_args {
-    }
-    | datatype ID {
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
-    }
+function_args: function_arg
+    | function_args ',' function_arg
     ;
-    
+
+function_arg: datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
+        quadr_arg_t arg1 = {0};
+        quadr_init_arg(&arg1, $2.name, QUADR_ARG_STR);
+        quadr_gencode(QUAD_TYPE_PARAM_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
+    }
+    | %empty
+    ;
+   
 
 datatype: INT { data_type = TYPE_INT; }
     | FLOAT { data_type = TYPE_FLOAT; }
@@ -127,8 +138,6 @@ while_statement: WHILE {
     } '(' condition ')' {
        
     } scope {
-
-
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
@@ -243,7 +252,7 @@ iterator_init: datatype ID {
 
 statement: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
-    } init {
+    } inits {
         if($4.is_null)
         {
             quadr_arg_t arg1 = {0};
@@ -272,6 +281,10 @@ statement: datatype ID {
     }
     ;
 
+inits: init
+    | inits ',' init
+    ;
+
 init: '=' expression {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
@@ -286,20 +299,37 @@ init: '=' expression {
             $2.is_temperorary = false;
         }
     }
-    | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
+    | ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
         
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $2.name, QUADR_ARG_STR);
+        quadr_init_arg(&res, $1.name, QUADR_ARG_STR);
         
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
     } 
+    /* | ID '=' expression {
+        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
+        quadr_arg_t arg1 = {0};
+        quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, $1.name, QUADR_ARG_STR);
+
+        quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
+        if($3.is_temperorary)
+        {
+            temp_var = 0;
+            $3.is_temperorary = false;
+        }
+    } */
     | %empty { 
         $$.is_null = true;
     }
     ;
+
+
 
 printf_statement: PRINTF {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
@@ -427,16 +457,25 @@ expression: expression ADD expression {
 
 
 
-value: NUMBER 
-    | FLOAT_NUM 
+value: NUMBER { $$.is_variable = false; }
+    | FLOAT_NUM { $$.is_variable = false; }
     | ID { 
         check_variable_declaration($1.name);
+        $$.is_variable = true;
      }
     ;
 
 return: RETURN { 
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
-    } expression ';' 
+    } expression ';' {
+        quadr_arg_t arg1 = {0};
+
+        quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+
+        _Bool is_main = strcmp(current_function, "main") == 0;
+        quadr_gencode(is_main ? QUAD_TYPE_RETURN_MAIN : QUAD_TYPE_RETURN_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  
+                        &vec_quadr, false, t_sym_tab, depth_scope, current_function);
+    }
     ;
 
 %%
