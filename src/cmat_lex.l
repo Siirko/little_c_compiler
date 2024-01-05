@@ -20,6 +20,7 @@ unary "++"|"--"
 
 "return"                    { strncpy(yylval.node_t.name, yytext, 1024); return RETURN; }
 "for"	                    { strncpy(yylval.node_t.name, yytext, 1024); return FOR; }
+"while"	                    { strncpy(yylval.node_t.name, yytext, 1024); return WHILE; }
 "if"	                    { strncpy(yylval.node_t.name, yytext, 1024); return IF; }
 "else"	                    { strncpy(yylval.node_t.name, yytext, 1024); return ELSE; }
 
