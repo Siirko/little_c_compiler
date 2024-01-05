@@ -10,7 +10,6 @@ extern int yyparse();
 extern FILE *yyin;
 // hashmap<string, vector<vector<hashmap<string, symbol_t>>>> t_sym_tab;
 extern hashmap_t *t_sym_tab;
-extern ast_t *head;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
 
@@ -25,8 +24,6 @@ void cmat_init()
 
 void cmat_free(void)
 {
-    ast_free(head);
-
     int i;
     quadr_t quad;
     vec_foreach(&vec_quadr, quad, i)
@@ -49,7 +46,6 @@ void cmat_free(void)
 void initiate_args(int argc, char *argv[])
 {
     arguments.cmat_file = "";
-    arguments.show_abstract_syntax_tree = false;
     arguments.show_symbol_table = false;
     arguments.show_intermediate_code = false;
     arguments.output_file = "stdout";
@@ -78,8 +74,6 @@ int main(int argc, char *argv[])
 
     if (arguments.show_symbol_table)
         show_symbol_table(t_sym_tab);
-    if (arguments.show_abstract_syntax_tree)
-        ast_show(head);
     if (arguments.show_intermediate_code)
     {
         int i;
