@@ -1,3 +1,9 @@
+int func123(int a, int b)
+{
+    int tmp = a + b;
+    return 2 + tmp;
+}
+
 int main()
 {
     int a = 0;
@@ -9,4 +15,5 @@ int main()
         }
     }
     print(a);
+    return a;
 }

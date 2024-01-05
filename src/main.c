@@ -29,11 +29,20 @@ void cmat_free(void)
     vec_foreach(&vec_quadr, quad, i)
     {
         if (quad.arg1.val != NULL)
+        {
             free(quad.arg1.val);
+            free(quad.arg1.scope.function_name);
+        }
         if (quad.arg2.val != NULL)
+        {
             free(quad.arg2.val);
+            free(quad.arg2.scope.function_name);
+        }
         if (quad.res.val != NULL)
+        {
             free(quad.res.val);
+            free(quad.res.scope.function_name);
+        }
     }
     vec_deinit(&i_if_end);
     vec_deinit(&vec_quadr);
