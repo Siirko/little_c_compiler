@@ -4,7 +4,6 @@
     #include <stdlib.h>
     #include <ctype.h>
     #include <stdbool.h>
-    #include "../include/ast.h"
     #include "../include/hashmap.h"
     #include "../include/symbol.h"
     #include "../include/quadr.h"
@@ -21,7 +20,6 @@
     extern int counter;
 
     vec_quadr_t vec_quadr;
-    ast_t *head;
     hashmap_t *t_sym_tab;
     enum data_type data_type;
     char current_function[1024] = {0};
@@ -32,24 +30,20 @@
     int temp_var = 0;
     int labels = 0;
     int if_counter = 0;
-    int id_if_start = 0;
     int depth_scope = 0;
-    int width_scope = 0;
     vec_int_t i_if_end;
 %}
-
 
 %union {
     struct node {
         char name[1024];
-        struct ast* node;
         _Bool is_temperorary;
+        _Bool is_null;
     } node_t;
 
     struct cond_node {
         char if_block[1024];
         char else_block[1024];
-        struct ast* node;
     } cond_node_t;
 }
 
@@ -61,7 +55,8 @@
 
 %type <node_t> iterator iterator_init 
 %type <node_t> printf_statement print_statement
-%type <node_t> program main body scope return
+%type <node_t> program body scope return
+%type <node_t> function function_args
 %type <node_t> datatype expression init value
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
@@ -70,19 +65,28 @@
 
 %%
 
-program: main '(' ')' '{' body return '}' {
-        $1.node = ast_new("main", $5.node, $6.node, AST_MAIN);
-        $$.node = ast_new("program", NULL, $1.node, AST_ROOT);
-        head = $$.node;
-    }
+program: function program
+    | function
     ;
 
-main: datatype ID { 
-        init_scope_key(t_sym_tab, "main");
-        add_symbol_to_scope(t_sym_tab, depth_scope, "main", TYPE_FUNCTION, &data_type, yytext, counter);
-        sprintf(current_function, "%s", "main");
+function: datatype ID { 
+        init_scope_key(t_sym_tab, $2.name);
+        add_symbol_to_scope(t_sym_tab, depth_scope, $2.name, TYPE_FUNCTION, &data_type, yytext, counter);
+        sprintf(current_function, "%s", $2.name);
+        depth_scope = 0;
+    } '(' function_args ')' '{' body return '}'
+    ;
+
+function_args: %empty
+    | datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
+    } ',' function_args {
+    }
+    | datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
     }
     ;
+    
 
 datatype: INT { data_type = TYPE_INT; }
     | FLOAT { data_type = TYPE_FLOAT; }
@@ -90,14 +94,14 @@ datatype: INT { data_type = TYPE_INT; }
 
 
 body: body_element
-    | body body_element { $$.node = ast_new("statements", $1.node, $2.node, AST_STATEMENTS); }
+    | body body_element
     ;
 
 
 body_element: for_statement
     | while_statement
     | if_statement
-    | statement ';' { $$.node = $1.node; }
+    | statement ';'
     | printf_statement
     | print_statement
     ;
@@ -113,7 +117,6 @@ scope: '{' {
             vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
         }
     } body '}' {
-        $$.node = $3.node;
         --depth_scope;
         clear_empty_hashmaps(t_sym_tab, depth_scope+1, current_function);
     }
@@ -139,9 +142,6 @@ while_statement: WHILE {
 for_statement: FOR { 
         is_for = true;
     } '(' iterator_init ';' condition ';' iterator ')' scope {
-        ast_t *tmp = ast_new("CONDITION", $6.node, $8.node, AST_CONDITION);
-        ast_t *tmp2 = ast_new("CONDITION", $4.node, tmp, AST_CONDITION);
-        $$.node = ast_new($1.name, tmp2, $10.node, AST_FOR);
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $6.if_block, QUADR_ARG_GOTO);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
@@ -170,13 +170,9 @@ if_statement: IF {
         quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL);
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr, false, t_sym_tab, depth_scope, current_function);
     }
-    else {
-        ast_t *tmp = ast_new($1.name, $4.node, $7.node, AST_IF);
-        $$.node = ast_new("if-else", tmp, $9.node, AST_IF_ELSE);
-    }
+    else
 
 else: ELSE scope {
-        $$.node = ast_new($1.name, NULL, $2.node, AST_ELSE);
         if(in_if_condition && --if_counter == 0)
         {
             char tmp2[1024] = {0};
@@ -195,16 +191,12 @@ else: ELSE scope {
             ++labels;
         }
     }
-    | { $$.node = NULL; }
     ;
 
 
 iterator: ID { 
         check_variable_declaration($1.name);
     } UNARY {
-        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
-        $3.node = ast_new($3.name, NULL, NULL, AST_UNARY);
-        $$.node = ast_new("ITERATOR", $1.node, $3.node, AST_ITERATOR);
         char tmp[1024] = {0};
         sprintf(tmp, "t%d", temp_var);
         
@@ -235,9 +227,6 @@ iterator_init: datatype ID {
         vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
     } '=' value {
-        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
-        $$.node = ast_new("declaration", $2.node, $5.node, AST_DECLARATION);
-
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $5.name, $5.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
 
@@ -255,9 +244,7 @@ iterator_init: datatype ID {
 statement: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
     } init {
-        $2.node = ast_new($2.name, NULL, NULL, AST_ID);
-        $$.node = ast_new("declaration", $2.node, $4.node, AST_DECLARATION);
-        if($4.node->type == AST_NULL)
+        if($4.is_null)
         {
             quadr_arg_t arg1 = {0};
             quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
@@ -269,9 +256,6 @@ statement: datatype ID {
         }
     }
     | ID { check_variable_declaration($1.name); } '=' expression {
-        $1.node = ast_new($1.name, NULL, NULL, AST_ID);
-        $$.node = ast_new("=", $1.node, $4.node, AST_ASSIGNATION);
-
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
 
@@ -289,8 +273,6 @@ statement: datatype ID {
     ;
 
 init: '=' expression {
-        $$.node = $2.node;
-
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
 
@@ -306,7 +288,6 @@ init: '=' expression {
     }
     | ',' ID { // can't do float a = 1.2, b = 2.3; ... yet
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
-        $$.node = ast_new($2.name, NULL, NULL, AST_ID);
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
         
@@ -315,8 +296,8 @@ init: '=' expression {
         
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr, false, t_sym_tab, depth_scope, current_function);
     } 
-    | { 
-        $$.node = ast_new("NULL", NULL, NULL, AST_NULL); 
+    | %empty { 
+        $$.is_null = true;
     }
     ;
 
@@ -324,7 +305,6 @@ printf_statement: PRINTF {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' STR ')' ';'
     { 
-        $$.node = ast_new("printf", NULL, NULL, AST_LIB_FUNCTION);
         enum data_type type = TYPE_STR;
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_CONST, &type, $4.name, counter);
         quadr_arg_t arg1 = {0};
@@ -337,7 +317,6 @@ print_statement: PRINT {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' ID { check_variable_declaration($1.name); } ')' ';' 
     {
-        $$.node = ast_new("print", NULL, NULL, AST_LIB_FUNCTION);
         quadr_arg_t arg1 = {0};
         switch(data_type)
         {
@@ -364,34 +343,27 @@ print_statement: PRINT {
     ;
 
 condition: value LT value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_LT);
     }
     | value GT value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_GT);
     }
     | value LE value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_LE);
     }
     | value GE value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_GE);
     }
     | value EQ value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_EQ);
     }
     | value NE value {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_RELOP);
         quadr_genrelop($$.if_block, $$.else_block, $1.name, $3.name, QUAD_OP_NE);
     }
     ;
 
 
 expression: expression ADD expression {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_ADD);
         sprintf($$.name, "t%d", temp_var++);
         $$.is_temperorary = true;
         quadr_arg_t arg1 = {0};
@@ -406,7 +378,6 @@ expression: expression ADD expression {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr, true, t_sym_tab, depth_scope, current_function);
     }
     | expression SUBTRACT expression {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_SUBTRACT);
         sprintf($$.name, "t%d", temp_var++);
         $$.is_temperorary = true;
 
@@ -422,7 +393,6 @@ expression: expression ADD expression {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, arg1, arg2, res, &vec_quadr, true, t_sym_tab, depth_scope, current_function);
     }
     | expression MULTIPLY expression {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_MULTIPLY);
         sprintf($$.name, "t%d", temp_var++);
         $$.is_temperorary = true;
 
@@ -438,7 +408,6 @@ expression: expression ADD expression {
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, arg1, arg2, res, &vec_quadr, true, t_sym_tab, depth_scope, current_function);
     }
     | expression DIVIDE expression {
-        $$.node = ast_new($2.name, $1.node, $3.node, AST_DIVIDE);
         sprintf($$.name, "t%d", temp_var++);
         $$.is_temperorary = true;
         
@@ -453,31 +422,21 @@ expression: expression ADD expression {
         
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, arg1, arg2, res, &vec_quadr, true, t_sym_tab, depth_scope, current_function);
     }
-    | value { 
-        $$.node = $1.node;
-    }
+    | value
     ;
 
 
 
-value: NUMBER { 
-        $$.node = ast_new($1.name, NULL, NULL, AST_INTEGER);
-    }
-    | FLOAT_NUM { 
-        $$.node = ast_new($1.name, NULL, NULL, AST_FLOAT);
-    }
+value: NUMBER 
+    | FLOAT_NUM 
     | ID { 
         check_variable_declaration($1.name);
-        $$.node = ast_new($1.name, NULL, NULL, AST_ID);
      }
     ;
 
 return: RETURN { 
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
-    } expression ';' {
-        $$.node = ast_new("RETURN", NULL, $3.node, AST_RETURN);
-    } 
-    | { $$.node = NULL; }
+    } expression ';' 
     ;
 
 %%

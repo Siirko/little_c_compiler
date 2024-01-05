@@ -13,7 +13,6 @@ static struct argp_option options[] = {{"cmat_file", 'f', "CMAT_FILE", 0, "", 0}
                                        {"output_file", 'o', "OUTPUT_FILE", 0, "MIPS Assembly file", 0},
                                        {"tos", 's', 0, 0, "Show Symbol table", 0},
                                        {"interm_code", 'i', 0, 0, "Show Intermediate code", 0},
-                                       {"ast", 'a', 0, 0, "Show Abstract Syntax tree", 0},
                                        {0}};
 
 /* Used by main to communicate with parse_opt. */
@@ -24,7 +23,6 @@ typedef struct arguments
     char *output_file;
     bool show_symbol_table;
     bool show_intermediate_code;
-    bool show_abstract_syntax_tree;
 } arguments_t;
 
 /* Parse a single option. */
@@ -48,9 +46,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         break;
     case 'i':
         arguments->show_intermediate_code = true;
-        break;
-    case 'a':
-        arguments->show_abstract_syntax_tree = true;
         break;
     case 'f':
         arguments->cmat_file = arg;
