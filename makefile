@@ -39,7 +39,6 @@ test_matriceC: src/Matrix/matrix.c
 
 generate_matrix_S: src/Matrix/matrix.c
 	cd src/Matrix
-	sudo apt-get install gcc-mips-linux-gnu
 	mips-linux-gnu-gcc -S -march=r2000 -mfp32 -o src/Matrix/matrix.s src/Matrix/matrix.c
 	
 .PHONY: clean
