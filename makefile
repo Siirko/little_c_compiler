@@ -33,6 +33,15 @@ $(SRC_PATH)/$(LEXICAL_FILE).c: $(SRC_PATH)/$(LEXICAL_FILE).l
 $(SRC_PATH)/$(BISON_FILE).c: $(SRC_PATH)/$(BISON_FILE).y
 	bison -d --debug $(SRC_PATH)/$(BISON_FILE).y -o $(SRC_PATH)/$(BISON_FILE).c
 
+test_matriceC: src/Matrix/matrix.c
+	mkdir -p $(BIN_PATH)
+	$(CC) -o $(BIN_PATH)/test_matrix_C $(CFLAGS) src/Matrix/matrix.c src/Matrix/test_matrix_C.c  -Iinclude
+
+generate_matrix_S: src/Matrix/matrix.c
+	cd src/Matrix
+	sudo apt-get install gcc-mips-linux-gnu
+	mips-linux-gnu-gcc -S -march=r2000 -mfp32 -o src/Matrix/matrix.s src/Matrix/matrix.c
+	
 .PHONY: clean
 clean:
 	rm -fr $(OBJ_PATH)
