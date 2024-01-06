@@ -39,7 +39,7 @@ test_matriceC: src/Matrix/matrix.c
 
 generate_matrix_S: src/Matrix/matrix.c
 	cd src/Matrix
-	mips-linux-gnu-gcc -S -march=r2000 -mfp32 -mabi=n32 -mno-abicalls -mno-branch-likely -mno-mips16 -mno-micromips -fno-ident -fno-delayed-branch -O0 -o src/Matrix/matrix.s src/Matrix/matrix.c
+	mips-linux-gnu-gcc -S -march=r2000 -mfp32 -o src/Matrix/matrix.s src/Matrix/matrix.c
 	
 .PHONY: clean
 clean:
