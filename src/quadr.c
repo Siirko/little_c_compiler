@@ -19,7 +19,8 @@ void quadr_gencode(enum quad_types type, enum quad_ops op, quadr_arg_t arg1, qua
     bool is_scope_needed = false;
     if (type == QUAD_TYPE_BINARY_ASSIGN || type == QUAD_TYPE_UNARY_ASSIGN || type == QUAD_TYPE_COPY ||
         type == QUAD_TYPE_IF || type == QUAD_TYPE_IF_NOT || type == QUAD_TYPE_SYSCALL_PRINT_INT ||
-        type == QUAD_TYPE_SYSCALL_PRINT_FLOAT)
+        type == QUAD_TYPE_SYSCALL_PRINT_FLOAT || type == QUAD_TYPE_RETURN_FUNCTION ||
+        type == QUAD_TYPE_RETURN_MAIN || type == QUAD_TYPE_PARAM_CALL || type == QUAD_TYPE_PARAM_FUNCTION)
         is_scope_needed = true;
 
     if (arg1.val != NULL)
@@ -54,8 +55,13 @@ void print_quad(quadr_t quad)
         break;
     case QUAD_TYPE_GOTO:
     case QUAD_TYPE_LABEL:
+    case QUAD_TYPE_LABEL_FUNCTION:
         printf(quad_type_str[quad.type], quad.res.val);
         break;
+    case QUAD_TYPE_RETURN_MAIN:
+    case QUAD_TYPE_RETURN_FUNCTION:
+    case QUAD_TYPE_PARAM_CALL:
+    case QUAD_TYPE_PARAM_FUNCTION:
     case QUAD_TYPE_SYSCALL_PRINT_INT:
     case QUAD_TYPE_SYSCALL_PRINT_FLOAT:
     case QUAD_TYPE_SYSCALL_PRINT_STR:

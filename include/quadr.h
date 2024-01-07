@@ -16,12 +16,16 @@
     /* if x relop y goto LABEL */                                                                            \
     X(QUAD_TYPE_IF, "\nIF (%s %s %s) GOTO %s\n")                                                             \
     X(QUAD_TYPE_IF_NOT, "\nIF NOT (%s %s %s) GOTO %s\n")                                                     \
+    X(QUAD_TYPE_RETURN_MAIN, "exit(%s)\n")                                                                   \
+    X(QUAD_TYPE_RETURN_FUNCTION, "RETURN FUNCTION %s\n")                                                     \
     /* param x */                                                                                            \
     /* call y, n*/                                                                                           \
     /* ex: param a, param b, call sqrt, 2*/                                                                  \
-    X(QUAD_TYPE_PARAM, "param %s\n")                                                                         \
+    X(QUAD_TYPE_PARAM_CALL, "param %s\n")                                                                    \
+    X(QUAD_TYPE_PARAM_FUNCTION, "func_param %s\n")                                                           \
     X(QUAD_TYPE_CALL, "call %s, %s\n")                                                                       \
     X(QUAD_TYPE_LABEL, "\n%s:\n")                                                                            \
+    X(QUAD_TYPE_LABEL_FUNCTION, "\nFUNCTION %s:\n")                                                          \
     X(QUAD_TYPE_SYSCALL_PRINT_STR, "print_str(%s)\n")                                                        \
     X(QUAD_TYPE_SYSCALL_PRINT_INT, "print_int(%s)\n")                                                        \
     X(QUAD_TYPE_SYSCALL_PRINT_FLOAT, "print_float(%s)\n")
