@@ -28,17 +28,6 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
             hashmap_t *tmp2;
             vec_foreach(tmp, tmp2, j)
             {
-                // toss empty hashmaps because grammar is not perfect
-                // it adds empty hashmaps to symbol table when a new scopes is detected
-                // even if there's no created variables
-                // if (tmp2->count == 0)
-                // {
-                //     hashmap_free(tmp2);
-                //     free(tmp2);
-                //     vec_splice(tmp, j, 1);
-                //     j--;
-                //     continue;
-                // }
                 hashmap_iter_t iter = {0};
                 hashmap_iter_init(&iter, tmp2);
                 do
@@ -48,7 +37,17 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
                     symbol_t *symbol = (symbol_t *)iter.node->value;
                     if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR)
                     {
-                        fprintf(file, "\t%s_%s_%d_%d: .word 0\n", symbol->id, function_scope, i, j);
+                        switch (symbol->data_type)
+                        {
+                        case TYPE_INT:
+                            fprintf(file, "\t%s_%s_%d_%d: .word 0\n", symbol->id, function_scope, i, j);
+                            break;
+                        case TYPE_FLOAT:
+                            fprintf(file, "\t%s_%s_%d_%d: .float 0.0\n", symbol->id, function_scope, i, j);
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 } while (hashmap_iter_next(&iter));
             }
@@ -76,6 +75,16 @@ void mips_macro_print_int(FILE *file)
                   "syscall\n"
                   ".end_macro\n\n");
 }
+
+void mips_macro_print_float(FILE *file)
+{
+    fprintf(file, ".macro print_float (%%x)\n"
+                  "li $v0, 2\n"
+                  "add $a0, $zero, %%x\n"
+                  "syscall\n"
+                  ".end_macro\n\n");
+}
+
 void mips_macro_exit(FILE *file)
 {
     fprintf(file, ".macro exit(%%x)\n"
@@ -87,7 +96,7 @@ void mips_macro_exit(FILE *file)
 
 void mips_copy_assign(quadr_t quadr, FILE *file)
 {
-    bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
+    bool arg1_int_float = quadr.arg1.type == QUADR_ARG_INT || quadr.arg1.type == QUADR_ARG_FLOAT;
     bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
 
@@ -97,7 +106,7 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
     fprintf(file, buf, quadr.res.val, quadr.arg1.val);
     ////////////////////////////////////////////////
-    if (arg1_int)
+    if (arg1_int_float)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else if (arg1_tmp)
     {
@@ -128,8 +137,8 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
 {
-    bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
-    bool arg2_int = quadr.arg2.type == QUADR_ARG_INT;
+    bool arg1_int_float = quadr.arg1.type == QUADR_ARG_INT || quadr.arg1.type == QUADR_ARG_FLOAT;
+    bool arg2_int_float = quadr.arg2.type == QUADR_ARG_INT || quadr.arg2.type == QUADR_ARG_FLOAT;
 
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
     bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
@@ -151,7 +160,7 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
         quadr.arg1.val = strdup(tmp_reg);
     }
-    else if (arg1_int)
+    else if (arg1_int_float)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else
         fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
@@ -165,7 +174,7 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg2.val);
         quadr.arg2.val = strdup(tmp_reg);
     }
-    else if (arg2_int)
+    else if (arg2_int_float)
     {
         tmp_reg[1]++;
         fprintf(file, "\tli $%s, %s\n", tmp_reg, quadr.arg2.val);
@@ -303,6 +312,7 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
     mips_macro_print_str(file);
     mips_macro_print_int(file);
     mips_macro_exit(file);
+    mips_macro_print_float(file);
     mips_data_section(t_sym_tab, file);
     fprintf(file, ".text\n"
                   ".globl main\n");
@@ -377,6 +387,17 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
             else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
                 fprintf(file, "\tprint_int($%s)\n", quadr.arg1.val);
             break;
+        }
+        case QUAD_TYPE_SYSCALL_PRINT_FLOAT:
+        {
+            if (quadr.arg1.type == QUADR_ARG_FLOAT)
+            {
+                fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                        quadr.arg1.scope.depth, quadr.arg1.scope.width);
+                fprintf(file, "\tprint_float($t0)\n");
+            }
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\tprint_float($%s)\n", quadr.arg1.val);
         }
         case QUAD_TYPE_RETURN_MAIN:
         {
