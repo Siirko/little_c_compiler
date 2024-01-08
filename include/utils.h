@@ -60,3 +60,18 @@ static inline _Bool is_str_integer(const char *str)
             return false;
     return true;
 }
+
+static inline _Bool is_str_float(const char *str)
+{
+    char *endptr;
+    errno = 0;
+    strtof(str, &endptr);
+    if (errno == ERANGE)
+        return false;
+    if (endptr == str)
+        return false;
+    for (; *endptr != '\0'; endptr++)
+        if (!isspace(*endptr))
+            return false;
+    return true;
+}
