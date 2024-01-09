@@ -78,7 +78,7 @@ function: datatype ID {
         _Bool is_main = strcmp(current_function, "main") == 0;
 
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, current_function, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, current_function, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(is_main ? QUAD_TYPE_LABEL : QUAD_TYPE_LABEL_FUNCTION, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, 
                         res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         depth_scope = 0;
@@ -92,7 +92,7 @@ function_args: function_arg
 function_arg: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter);
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $2.name, QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $2.name, QUADR_ARG_STR, data_type);
         quadr_gencode(QUAD_TYPE_PARAM_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
     | %empty
@@ -139,11 +139,11 @@ while_statement: WHILE {
        
     } scope {
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO);
+        quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
 
         res = (quadr_arg_t){0};
-        quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
         is_while = false;
     }
@@ -152,10 +152,10 @@ for_statement: FOR {
         is_for = true;
     } '(' iterator_init ';' condition ';' iterator ')' scope {
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $6.if_block, QUADR_ARG_GOTO);
+        quadr_init_arg(&res, $6.if_block, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         res = (quadr_arg_t){0};
-        quadr_init_arg(&res, $6.else_block, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, $6.else_block, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
 
@@ -165,18 +165,18 @@ if_statement: IF {
         ++if_counter;
     } '(' condition ')' {
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $4.if_block, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, $4.if_block, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
     } scope {
         char tmp2[1024] = {0};
         sprintf(tmp2, "L%d", labels);
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, tmp2, QUADR_ARG_GOTO);
+        quadr_init_arg(&res, tmp2, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
         if(in_if_condition)
             vec_push(&i_if_end, vec_quadr.length-1);
         res = (quadr_arg_t){0};
-        quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, $4.else_block, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
     else
@@ -187,7 +187,7 @@ else: ELSE scope {
             char tmp2[1024] = {0};
             sprintf(tmp2, "L%d", labels);
             quadr_arg_t res = {0};
-            quadr_init_arg(&res, tmp2, QUADR_ARG_LABEL);
+            quadr_init_arg(&res, tmp2, QUADR_ARG_LABEL, TYPE_STR);
             quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
             int size = i_if_end.length;
             for(int i = 0; i < size; ++i)
@@ -210,17 +210,17 @@ iterator: ID {
         sprintf(tmp, "t%d", temp_var);
         
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $1.name, QUADR_ARG_STR, TYPE_INT);
         quadr_arg_t _arg1 = {0};
-        quadr_init_arg(&_arg1, $1.name, QUADR_ARG_STR);
+        quadr_init_arg(&_arg1, $1.name, QUADR_ARG_STR, TYPE_INT);
 
         quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, "1", QUADR_ARG_INT);
+        quadr_init_arg(&arg2, "1", QUADR_ARG_INT, TYPE_INT);
         
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR);
+        quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
         quadr_arg_t _res = {0};
-        quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR);
+        quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
 
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -237,10 +237,10 @@ iterator_init: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
     } '=' value {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $5.name, $5.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $5.name, $5.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&res, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         if($5.is_temperorary)
@@ -255,21 +255,30 @@ statement: datatype ID {
     } inits {
         if($4.is_null)
         {
+            symbol_t *symbol = check_variable_declaration($2.name);
+            data_type = symbol->data_type;
             quadr_arg_t arg1 = {0};
-            quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
+            if(data_type == TYPE_INT)
+                quadr_init_arg(&arg1, "0", QUADR_ARG_INT, TYPE_INT);
+            else if(data_type == TYPE_FLOAT)
+                quadr_init_arg(&arg1, "0.0", QUADR_ARG_FLOAT, TYPE_FLOAT);
 
             quadr_arg_t res = {0};
-            quadr_init_arg(&res, $2.name, QUADR_ARG_STR);
+            quadr_init_arg(&res, $2.name, QUADR_ARG_STR, data_type);
 
             quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         }
     }
-    | ID { check_variable_declaration($1.name); } '=' expression {
+    | ID { 
+        symbol_t *symbol = check_variable_declaration($1.name);
+        if(symbol != NULL)
+            data_type = symbol->data_type;
+    } '=' expression {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&res, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         if($4.is_temperorary || $1.is_temperorary)
@@ -287,10 +296,10 @@ inits: init
 
 init: '=' expression {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, $$.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&res, $$.name, $$.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         if($2.is_temperorary)
@@ -300,12 +309,18 @@ init: '=' expression {
         }
     }
     | ID {
+        symbol_t *symbol = check_variable_declaration($1.name);
+        if(symbol != NULL)
+            data_type = symbol->data_type;
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, "0", QUADR_ARG_INT);
+        if(data_type == TYPE_INT)
+            quadr_init_arg(&arg1, "0", QUADR_ARG_INT, TYPE_INT);
+        else if(data_type == TYPE_FLOAT)
+            quadr_init_arg(&arg1, "0.0", QUADR_ARG_FLOAT, TYPE_FLOAT);
         
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $1.name, QUADR_ARG_STR);
+        quadr_init_arg(&res, $1.name, QUADR_ARG_STR, data_type);
         
         quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     } 
@@ -338,7 +353,7 @@ printf_statement: PRINTF {
         enum data_type type = TYPE_STR;
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_CONST, &type, $4.name, counter);
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $4.name, QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $4.name, QUADR_ARG_STR, TYPE_STR);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, t_sym_tab, depth_scope, current_function);
     }
     ;
@@ -353,13 +368,13 @@ print_statement: PRINT '(' ID {
         {
             case TYPE_INT:
             {
-                quadr_init_arg(&arg1, $3.name, QUADR_ARG_INT);
+                quadr_init_arg(&arg1, $3.name, QUADR_ARG_INT, TYPE_INT);
                 quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_INT, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr,  t_sym_tab, depth_scope, current_function);
                 break;
             }
             case TYPE_FLOAT:
             {
-                quadr_init_arg(&arg1, $3.name, QUADR_ARG_FLOAT);
+                quadr_init_arg(&arg1, $3.name, QUADR_ARG_FLOAT, TYPE_FLOAT);
                 quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_FLOAT, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr,  t_sym_tab, depth_scope, current_function);
                 break;
             }
@@ -395,61 +410,90 @@ condition: value LT value {
 
 
 expression: expression ADD expression {
-        sprintf($$.name, "t%d", temp_var++);
+        char var = data_type == TYPE_INT ? 't' : 'f';
+        sprintf($$.name, "%c%d", var, temp_var++);
         $$.is_temperorary = true;
+        symbol_t *symbol = check_variable_declaration($1.name);
+        enum data_type data_type_arg1 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg1);
         
+        symbol = check_variable_declaration($3.name);
+        enum data_type data_type_arg2 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg2);
 
+
+        symbol = check_variable_declaration($$.name);
+        enum data_type data_type_res = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR);
+        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_res);
         
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
     | expression SUBTRACT expression {
-        sprintf($$.name, "t%d", temp_var++);
+        char var = data_type == TYPE_INT ? 't' : 'f';
+        sprintf($$.name, "%c%d", var, temp_var++);
         $$.is_temperorary = true;
-
+        symbol_t *symbol = check_variable_declaration($1.name);
+        enum data_type data_type_arg1 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
-
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg1);
+        
+        symbol = check_variable_declaration($3.name);
+        enum data_type data_type_arg2 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg2);
 
+
+        symbol = check_variable_declaration($$.name);
+        enum data_type data_type_res = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR);
-
+        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_res);
+        
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
     | expression MULTIPLY expression {
-        sprintf($$.name, "t%d", temp_var++);
+        char var = data_type == TYPE_INT ? 't' : 'f';
+        sprintf($$.name, "%c%d", var, temp_var++);
         $$.is_temperorary = true;
-
+        symbol_t *symbol = check_variable_declaration($1.name);
+        enum data_type data_type_arg1 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, QUADR_ARG_STR);
-
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg1);
+        
+        symbol = check_variable_declaration($3.name);
+        enum data_type data_type_arg2 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg2);
 
+
+        symbol = check_variable_declaration($$.name);
+        enum data_type data_type_res = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR);
+        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_res);
 
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
     | expression DIVIDE expression {
-        sprintf($$.name, "t%d", temp_var++);
+        char var = data_type == TYPE_INT ? 't' : 'f';
+        sprintf($$.name, "%c%d", var, temp_var++);
         $$.is_temperorary = true;
-        
+        symbol_t *symbol = check_variable_declaration($1.name);
+        enum data_type data_type_arg1 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, QUADR_ARG_STR);
-
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg1);
+        
+        symbol = check_variable_declaration($3.name);
+        enum data_type data_type_arg2 = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_arg2);
 
+
+        symbol = check_variable_declaration($$.name);
+        enum data_type data_type_res = symbol != NULL ? symbol->data_type : data_type;
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR);
+        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_res);
         
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     }
@@ -471,7 +515,7 @@ return: RETURN {
     } expression ';' {
         quadr_arg_t arg1 = {0};
 
-        quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR);
+        quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
         _Bool is_main = strcmp(current_function, "main") == 0;
         quadr_gencode(is_main ? QUAD_TYPE_RETURN_MAIN : QUAD_TYPE_RETURN_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  
@@ -483,25 +527,26 @@ return: RETURN {
 
 void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op)
 {
+    // need to retrieve the type of arg1 and arg2
     quadr_arg_t _arg1 = {0};
-    quadr_init_arg(&_arg1, arg1, QUADR_ARG_STR);
+    quadr_init_arg(&_arg1, arg1, QUADR_ARG_STR, data_type);
 
     quadr_arg_t _arg2 = {0};
-    quadr_init_arg(&_arg2, arg2, QUADR_ARG_STR);
+    quadr_init_arg(&_arg2, arg2, QUADR_ARG_STR, data_type);
 
 
     if(is_for || is_while)
     {
         sprintf(if_block, "L%d", labels++);
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, if_block, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, if_block, QUADR_ARG_LABEL, TYPE_STR);
 
         quadr_gencode(QUAD_TYPE_LABEL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
         char tmp[1024] = {0};
         sprintf(tmp, "L%d", labels);
         
         res = (quadr_arg_t){0};
-        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL, TYPE_STR);
         
         quadr_gencode(QUAD_TYPE_IF_NOT, op, _arg1, _arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         sprintf(else_block, "L%d", labels++);
@@ -512,13 +557,13 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
         sprintf(tmp, "L%d", labels);
 
         quadr_arg_t res = {0};
-        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL, TYPE_STR);
 
         quadr_gencode(QUAD_TYPE_IF, op, _arg1, _arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         sprintf(tmp, "L%d\n", labels+1);
 
         res = (quadr_arg_t){0};
-        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL);
+        quadr_init_arg(&res, tmp, QUADR_ARG_LABEL, TYPE_STR);
 
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res,  &vec_quadr,  t_sym_tab, depth_scope, current_function);
         sprintf(if_block, "L%d", labels++);
