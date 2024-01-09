@@ -80,7 +80,7 @@ void mips_macro_print_float(FILE *file)
 {
     fprintf(file, ".macro print_float (%%x)\n"
                   "li $v0, 2\n"
-                  "add $a0, $zero, %%x\n"
+                  "mov.s $f12, %%x\n"
                   "syscall\n"
                   ".end_macro\n\n");
 }
@@ -96,7 +96,8 @@ void mips_macro_exit(FILE *file)
 
 void mips_copy_assign(quadr_t quadr, FILE *file)
 {
-    bool arg1_int_float = quadr.arg1.type == QUADR_ARG_INT || quadr.arg1.type == QUADR_ARG_FLOAT;
+    bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
+    bool arg1_float = quadr.arg1.type == QUADR_ARG_FLOAT;
     bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
 
@@ -106,8 +107,15 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
     fprintf(file, buf, quadr.res.val, quadr.arg1.val);
     ////////////////////////////////////////////////
-    if (arg1_int_float)
+    if (arg1_int)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
+    else if (arg1_float)
+    {
+        // char *endptr;
+        // check if strtof failed to convert
+        float f = strtof(quadr.arg1.val, NULL);
+        fprintf(file, "\tli $t0, 0x%08X\n", *(unsigned int *)&f);
+    }
     else if (arg1_tmp)
     {
         if (strcmp(quadr.arg1.val, tmp_reg) == 0)
@@ -392,9 +400,9 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             if (quadr.arg1.type == QUADR_ARG_FLOAT)
             {
-                fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                fprintf(file, "\tl.s $f0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                         quadr.arg1.scope.depth, quadr.arg1.scope.width);
-                fprintf(file, "\tprint_float($t0)\n");
+                fprintf(file, "\tprint_float($f0)\n");
             }
             else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
                 fprintf(file, "\tprint_float($%s)\n", quadr.arg1.val);
