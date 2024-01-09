@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type)
+void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type, enum data_type data_type)
 {
+    arg->data_type = data_type;
     arg->val = strdup(val);
     bool is_integer = is_str_integer(val);
     bool is_float = is_str_float(val);
