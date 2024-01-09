@@ -14,7 +14,7 @@ int main()
         for (int i = 0; i < 10; i++)
         {
             a = a + 1;
-            b = b + 1.2 + 1;
+            // b = b + 1.2 + 1;
         }
     }
     print(a);
