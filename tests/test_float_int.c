@@ -5,9 +5,9 @@ int main()
 
     f = f + f + i;
     print(f);
-    // printf("\n");
-    // i = i + 32;
-    // print(i);
-    // printf("\n");
+    printf("\n");
+    i = i + 32;
+    print(i);
+    printf("\n");
     return 0;
 }
