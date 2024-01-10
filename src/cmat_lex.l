@@ -1,6 +1,7 @@
 %{
     #include "cmat_yacc.h"
     int counter = 1;
+    char linebuf[1024];
 %}
 
 %option yylineno
@@ -44,6 +45,10 @@ unary "++"|"--"
 \/\*(.*\n)*.*\*\/           { ; } 
 [ \t]*                      { ; }
 [\n]                        { counter++; }
+\n.* { 
+    strncpy(linebuf, yytext+1, sizeof(linebuf)); /* save the next line */
+    yyless(1); /* give back all but the \n to rescan */
+}
 .	                    { return *yytext; }
 ["].*["]                    { strncpy(yylval.node_t.name, yytext, 1024); return STR; }
 
