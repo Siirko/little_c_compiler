@@ -3,6 +3,17 @@
     void yyerror(const char *s);
     int counter = 1;
     char linebuf[1024];
+    int column = 1;
+
+    #define YY_USER_ACTION  do { \
+        yylloc.first_line = counter; \
+        yylloc.last_line = counter; \
+        \
+        yylloc.first_column = column; \
+        column += yyleng; \
+        yylloc.last_column = column; \
+    } while (0);
+
 %}
 
 %option yylineno
@@ -12,8 +23,6 @@
 alpha [a-zA-Z]
 digit [0-9]
 unary "++"|"--"
-
-%x SINGLE_STRING
 
 %%
 
@@ -47,8 +56,9 @@ unary "++"|"--"
 \/\/.*                      { ; }
 \/\*(.*\n)*.*\*\/           { ; } 
 [ \t]*                      { ; }
-[\n]                        { counter++; }
+[\n]                        { ; }
 \n.* { 
+    counter++; column = 1;
     strncpy(linebuf, yytext+1, sizeof(linebuf)); /* save the next line */
     yyless(1); /* give back all but the \n to rescan */
 }

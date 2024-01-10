@@ -370,7 +370,8 @@ printf_statement: PRINTF {
 
 print_statement: PRINT '(' ID { 
         symbol_t *symbol = check_variable_declaration($3.name);
-        data_type = symbol->data_type;
+        if(symbol != NULL)
+            data_type = symbol->data_type;
     } ')' ';' 
     {
         quadr_arg_t arg1 = {0};
@@ -609,19 +610,20 @@ void yyerror(const char* msg) {
                          ANSI_BOLD  "'%s' " ANSI_RESET
                      ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, yytext, yylineno);
     
-      // Find the position of yytext in linebuf
-    int position = strstr(linebuf, yytext) - linebuf + 2;
-
-    fprintf(stderr, "| %s\n", linebuf);
-    for (int i = 0; i < position; i++) 
-       fprintf(stderr, " ");
-            
-    size_t length = strlen(yytext);
-    for (int i = 0; i < length; i++) 
-        if(i == 0)
-            fprintf(stderr, "^");
-        else
-            fprintf(stderr, "~");
-    fprintf(stderr, "\n");
+    if(yylloc.first_line)
+    {
+        /* fprintf(stderr, "%d.%d-%d.%d: error\n", yylloc.first_line, yylloc.first_column,
+        yylloc.last_line, yylloc.last_column); */
+        fprintf(stderr, "%s\n", linebuf);
+        int len = yylloc.last_column - yylloc.first_column;
+        for(int i = 0; i < yylloc.first_column-1; ++i)
+            fprintf(stderr, " ");
+        for(int i = 0; i < len; ++i)
+            if(i == 0)
+                fprintf(stderr, "^");
+            else
+                fprintf(stderr, "~");
+        fprintf(stderr, "\n");
+    }
     error_count++;
 }
