@@ -75,6 +75,7 @@ typedef struct quadr_arg
     // only used when
     // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
     scope_t scope;
+    enum data_type data_type;
 } quadr_arg_t;
 
 typedef struct quadr
@@ -84,16 +85,15 @@ typedef struct quadr
     quadr_arg_t arg1;
     quadr_arg_t arg2;
     quadr_arg_t res;
-    bool is_tmp;
 } quadr_t;
 
 typedef vec_t(quadr_t) vec_quadr_t;
 
-void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type);
+void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type, enum data_type data_type);
 
 void quadr_gencode(enum quad_types type, enum quad_ops op, quadr_arg_t arg1, quadr_arg_t arg2,
-                   quadr_arg_t res, vec_quadr_t *vec_quadruples, bool is_tmp, hashmap_t *t_sym_tab,
-                   int depth_scope, char *key);
+                   quadr_arg_t res, vec_quadr_t *vec_quadruples, hashmap_t *t_sym_tab, int depth_scope,
+                   char *key);
 
 void print_quad(quadr_t quad);
 
