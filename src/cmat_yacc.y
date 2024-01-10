@@ -2,6 +2,7 @@
     #include <stdio.h>
     #include <string.h>
     #include <stdlib.h>
+    #include <unistd.h>
     #include <ctype.h>
     #include <stdbool.h>
     #include "../include/hashmap.h"
@@ -389,8 +390,7 @@ print_statement: PRINT '(' ID {
             }
             default:
             {
-                fprintf(stderr, "Error: can't print %s at line %d\n", $3.name, counter);
-                error_count++;
+                yyerror("Invalid type");
                 break;
             }
         }
@@ -431,11 +431,12 @@ expression: expression ADD expression {
     | expression DIVIDE expression {
         if(!$3.is_variable && $3.name[0] == '0')
             yyerror("Division by zero");
-        if($3.is_variable)
+        else if($3.is_variable)
         {
             // need to check the data of the variable
         }
-        init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
+        else
+            init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
     }
     | value
     ;
