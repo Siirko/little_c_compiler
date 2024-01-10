@@ -5,7 +5,7 @@ int main()
     int fd = 0;
     i = 10 + 5;
     f = f + 5.2 / 0;
-    print(f);
+    print("dfsfdsdsf");
     printf("\tdfsfsdfds\"\n");
     f = f * 4;
     print(f);
