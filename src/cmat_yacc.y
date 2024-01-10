@@ -14,6 +14,7 @@
     extern char* yytext;
     extern int yylineno;
 
+
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     symbol_t *check_variable_declaration(char* token);
     
@@ -47,6 +48,9 @@
         char else_block[1024];
     } cond_node_t;
 }
+%{
+    void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn);    
+%}
 
 %token <node_t> PRINT PRINTF 
 %token <node_t> ID STR INT FLOAT FLOAT_NUM NUMBER
@@ -62,7 +66,8 @@
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
 %type <cond_node_t> condition 
-%left ADD SUBTRACT MULTIPLY DIVIDE
+%left ADD SUBTRACT 
+%left MULTIPLY DIVIDE
 
 %%
 
@@ -411,242 +416,16 @@ condition: value LT value {
 
 
 expression: expression ADD expression {
-        char var = data_type == TYPE_INT ? 't' : 'f';
-        sprintf($$.name, "%c%d", var, temp_var++);
-        $$.is_temperorary = true;
-
-        enum data_type data_type_tmp;
-        if($1.is_temperorary)
-        {
-            if($1.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($1.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($1.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-            
-        quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-        
-        if($3.is_temperorary)
-        {
-            if($3.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($3.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-
-
-        if($$.is_temperorary)
-        {
-            if($$.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($$.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_tmp);
-        
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        init_arg_expression(QUAD_OP_ADD, &$1, &$3, &$$);
     }
     | expression SUBTRACT expression {
-        char var = data_type == TYPE_INT ? 't' : 'f';
-        sprintf($$.name, "%c%d", var, temp_var++);
-        $$.is_temperorary = true;
-        enum data_type data_type_tmp;
-        if($1.is_temperorary)
-        {
-            if($1.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($1.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($1.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-            
-        quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-        
-        if($3.is_temperorary)
-        {
-            if($3.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($3.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-
-
-        if($$.is_temperorary)
-        {
-            if($$.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($$.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_tmp);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_SUB, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        init_arg_expression(QUAD_OP_SUB, &$1, &$3, &$$);
     }
     | expression MULTIPLY expression {
-        char var = data_type == TYPE_INT ? 't' : 'f';
-        sprintf($$.name, "%c%d", var, temp_var++);
-        $$.is_temperorary = true;
-        enum data_type data_type_tmp;
-        if($1.is_temperorary)
-        {
-            if($1.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($1.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($1.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-            
-        quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-        
-        if($3.is_temperorary)
-        {
-            if($3.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($3.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-
-
-        if($$.is_temperorary)
-        {
-            if($$.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($$.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_tmp);
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_MUL, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        init_arg_expression(QUAD_OP_MUL, &$1, &$3, &$$);
     }
     | expression DIVIDE expression {
-        char var = data_type == TYPE_INT ? 't' : 'f';
-        sprintf($$.name, "%c%d", var, temp_var++);
-        $$.is_temperorary = true;
-        enum data_type data_type_tmp;
-        if($1.is_temperorary)
-        {
-            if($1.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($1.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($1.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-            
-        quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-        
-        if($3.is_temperorary)
-        {
-            if($3.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($3.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
-
-
-        if($$.is_temperorary)
-        {
-            if($$.name[0] == 'f')
-                data_type_tmp = TYPE_FLOAT;
-            else
-                data_type_tmp = TYPE_INT;
-        }
-        else if($$.is_variable)
-        {
-            symbol_t *symbol = check_variable_declaration($3.name);
-            data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
-        }
-        else
-            data_type_tmp = data_type;
-        quadr_arg_t res = {0};
-        quadr_init_arg(&res, $$.name, QUADR_ARG_TMP_VAR, data_type_tmp);        
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_DIV, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
     }
     | value
     ;
@@ -722,6 +501,67 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
         sprintf(if_block, "L%d", labels++);
         sprintf(else_block, "L%d", labels++);
     }
+}
+
+void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn)
+{
+    char var = data_type == TYPE_INT ? 't' : 'f';
+    sprintf(nn->name, "%c%d", var, temp_var++);
+    nn->is_temperorary = true;
+    enum data_type data_type_tmp;
+    if(n1->is_temperorary)
+    {
+        if(n1->name[0] == 'f')
+            data_type_tmp = TYPE_FLOAT;
+        else
+            data_type_tmp = TYPE_INT;
+    }
+    else if(n1->is_variable)
+    {
+        symbol_t *symbol = check_variable_declaration(n1->name);
+        data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
+    }
+    else
+        data_type_tmp = data_type;
+        
+    quadr_arg_t arg1 = {0};
+    quadr_init_arg(&arg1, n1->name, n1->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
+    
+    if(n3->is_temperorary)
+    {
+        if(n3->name[0] == 'f')
+            data_type_tmp = TYPE_FLOAT;
+        else
+            data_type_tmp = TYPE_INT;
+    }
+    else if(n3->is_variable)
+    {
+        symbol_t *symbol = check_variable_declaration(n3->name);
+        data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
+    }
+    else
+        data_type_tmp = data_type;
+    quadr_arg_t arg2 = {0};
+    quadr_init_arg(&arg2, n3->name, n3->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
+
+
+    if(nn->is_temperorary)
+    {
+        if(nn->name[0] == 'f')
+            data_type_tmp = TYPE_FLOAT;
+        else
+            data_type_tmp = TYPE_INT;
+    }
+    else if(nn->is_variable)
+    {
+        symbol_t *symbol = check_variable_declaration(n3->name);
+        data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
+    }
+    else
+        data_type_tmp = data_type;
+    quadr_arg_t res = {0};
+    quadr_init_arg(&res, nn->name, QUADR_ARG_TMP_VAR, data_type_tmp);      
+    quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
 }
 
 symbol_t *check_variable_declaration(char* token) {
