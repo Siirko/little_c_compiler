@@ -152,14 +152,11 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
 {
+    // Temporary variable is normaly always stored in arg1 !
     bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
-    bool arg1_float = quadr.arg1.type == QUADR_ARG_FLOAT;
     bool arg2_int = quadr.arg2.type == QUADR_ARG_INT;
-    bool arg2_float = quadr.arg2.type == QUADR_ARG_FLOAT;
-
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
     bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
-    bool arg2_tmp = quadr.arg2.type == QUADR_ARG_TMP_VAR;
 
     char tmp_reg_int[3] = "t0";
     char tmp_reg_float[3] = "f0";
@@ -188,27 +185,42 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
         tmp_reg_int[1]++;
     }
-    else if (quadr.arg1.data_type == TYPE_FLOAT)
+    else if (quadr.arg1.data_type == TYPE_FLOAT && quadr.arg1.type != QUADR_ARG_FLOAT)
+    {
         fprintf(file, "\tl.s $f0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                 quadr.arg1.scope.depth, quadr.arg1.scope.width);
+        tmp_reg_float[1]++;
+    }
+    else if (quadr.arg1.data_type == TYPE_FLOAT && quadr.arg1.type == QUADR_ARG_FLOAT)
+    {
+        float f = strtof(quadr.arg1.val, NULL);
+        fprintf(file, "\tli $%s, 0x%08X\n", tmp_reg_int, *(unsigned int *)&f);
+        fprintf(file, "\tmtc1 $%s, $%s\n", tmp_reg_int, tmp_reg_float);
+        tmp_reg_float[1]++;
+        tmp_reg_int[1]++;
+    }
     else
+    {
         fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                 quadr.arg1.scope.depth, quadr.arg1.scope.width);
+        tmp_reg_int[1]++;
+    }
 
     // loading arg2 to $t1
-    if (arg2_tmp)
-    {
-        if (strcmp(quadr.arg2.val, "t1") == 0)
-            tmp_reg_int[1]++;
-        if (strcmp(quadr.arg2.val, "f1") == 0)
-            tmp_reg_float[1]++;
-        if (quadr.arg2.data_type == TYPE_INT)
-            fprintf(file, "\tmove $%s, $%s\n", tmp_reg_int, quadr.arg2.val);
-        else if (quadr.arg2.data_type == TYPE_FLOAT)
-            fprintf(file, "\tmov.s $%s, $%s\n", tmp_reg_float, quadr.arg2.val);
-        quadr.arg2.val = strdup(tmp_reg_int);
-    }
-    else if (arg2_int)
+    // if (arg2_tmp)
+    // {
+    //     if (strcmp(quadr.arg2.val, "t1") == 0)
+    //         tmp_reg_int[1]++;
+    //     if (strcmp(quadr.arg2.val, "f1") == 0)
+    //         tmp_reg_float[1]++;
+    //     if (quadr.arg2.data_type == TYPE_INT)
+    //         fprintf(file, "\tmove $%s, $%s\n", tmp_reg_int, quadr.arg2.val);
+    //     else if (quadr.arg2.data_type == TYPE_FLOAT)
+    //         fprintf(file, "\tmov.s $%s, $%s\n", tmp_reg_float, quadr.arg2.val);
+    //     quadr.arg2.val = strdup(tmp_reg_int);
+    // }
+    // else
+    if (arg2_int)
     {
         if (quadr.arg2.data_type == TYPE_FLOAT)
         {
@@ -222,15 +234,22 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
         }
         else
         {
-            tmp_reg_int[1]++;
             fprintf(file, "\tli $%s, %s\n", tmp_reg_int, quadr.arg2.val);
+            tmp_reg_int[1]++;
         }
     }
-    else if (quadr.arg2.data_type == TYPE_FLOAT)
+    else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT)
     {
         tmp_reg_float[1]++;
         fprintf(file, "\tl.s $%s, %s_%s_%d_%d\n", tmp_reg_float, quadr.arg2.val,
                 quadr.arg2.scope.function_name, quadr.arg2.scope.depth, quadr.arg2.scope.width);
+    }
+    else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type == QUADR_ARG_FLOAT)
+    {
+        // tmp_reg_float[1]++;
+        float f = strtof(quadr.arg2.val, NULL);
+        fprintf(file, "\tli $%s, 0x%08X\n", tmp_reg_int, *(unsigned int *)&f);
+        fprintf(file, "\tmtc1 $%s, $%s\n", tmp_reg_int, tmp_reg_float);
     }
     else
     {
@@ -250,25 +269,14 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     {
         if (quadr.res.data_type == TYPE_INT)
         {
-            if (res_tmp && !arg1_tmp && !arg2_tmp)
+            if (res_tmp)
                 fprintf(file, "\tadd $%s, $t0, $t1\n", quadr.res.val);
-            else if (res_tmp && arg1_tmp && !arg2_tmp)
-                fprintf(file, "\tadd $%s, $%s, $t2\n", quadr.res.val, quadr.arg1.val);
-            else if (res_tmp && !arg1_tmp && arg2_tmp)
-                fprintf(file, "\tadd $%s, $t0, $%s\n", quadr.res.val, quadr.arg2.val);
-            else if (res_tmp && arg1_tmp && arg2_tmp)
-                fprintf(file, "\tadd $%s, $%s, $%s\n", quadr.res.val, quadr.arg1.val, quadr.arg2.val);
+            else
+                fprintf(file, "\tadd $%s, $t0, $t1\n", tmp_reg_int);
         }
         else if (quadr.res.data_type == TYPE_FLOAT)
         {
-            if (res_tmp && !arg1_tmp && !arg2_tmp)
-                fprintf(file, "\tadd.s $%s, $%s, $%s\n", quadr.res.val, quadr.res.val, tmp_reg_float);
-            else if (res_tmp && arg1_tmp && !arg2_tmp)
-                fprintf(file, "\tadd.s $%s, $%s, $%s\n", quadr.res.val, quadr.res.val, tmp_reg_float);
-            else if (res_tmp && !arg1_tmp && arg2_tmp)
-                fprintf(file, "\tadd.s $%s, $%s, $%s\n", quadr.res.val, tmp_reg_float, quadr.arg2.val);
-            else if (res_tmp && arg1_tmp && arg2_tmp)
-                fprintf(file, "\tadd.s $%s, $%s, $%s\n", quadr.res.val, quadr.arg1.val, quadr.arg2.val);
+            fprintf(file, "\tadd.s $%s, $%s, $%s\n", quadr.res.val, quadr.res.val, tmp_reg_float);
         }
         break;
     }
@@ -304,10 +312,17 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     case QUAD_OP_DIV:
     {
-        if (res_tmp)
-            fprintf(file, "\tdiv $%s, $t0, $t1\n", quadr.res.val);
-        else
-            fprintf(file, "\tdiv $%s, $t0, $t1\n", tmp_reg_int);
+        if (quadr.res.data_type == TYPE_INT)
+        {
+            if (res_tmp)
+                fprintf(file, "\tdiv $%s, $t0, $t1\n", quadr.res.val);
+            else
+                fprintf(file, "\tdiv $%s, $t0, $t1\n", tmp_reg_int);
+        }
+        else if (quadr.res.data_type == TYPE_FLOAT)
+        {
+            fprintf(file, "\tdiv.s $%s, $%s, $%s\n", quadr.res.val, quadr.res.val, tmp_reg_float);
+        }
         break;
     }
     default:
@@ -316,8 +331,6 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
 
     if (arg1_tmp)
         free(quadr.arg1.val);
-    if (arg2_tmp)
-        free(quadr.arg2.val);
 }
 
 void mips_if_assign(quadr_t quadr, FILE *file, bool is_not)
