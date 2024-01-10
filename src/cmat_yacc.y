@@ -560,8 +560,14 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     else
         data_type_tmp = data_type;
     quadr_arg_t res = {0};
-    quadr_init_arg(&res, nn->name, QUADR_ARG_TMP_VAR, data_type_tmp);      
-    quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    quadr_init_arg(&res, nn->name, QUADR_ARG_TMP_VAR, data_type_tmp);
+    // This for the backends, it force that the tmp variable is arg1 and not arg2
+    if(n1->is_temperorary)   
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    else if(n3->is_temperorary)
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg2, arg1, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    else
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
 }
 
 symbol_t *check_variable_declaration(char* token) {
