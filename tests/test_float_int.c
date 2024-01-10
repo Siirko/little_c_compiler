@@ -2,8 +2,9 @@ int main()
 {
     float f = 2.3;
     int i = 2;
+    int fd = 0;
     i = 10 + 5;
-    f = f + 5.2 + f;
+    f = f + 5.2 / 0;
     print(f);
     printf("\tdfsfsdfds\"\n");
     f = f * 4;

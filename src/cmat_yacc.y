@@ -361,8 +361,6 @@ printf_statement: PRINTF {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' STR ')' ';'
     { 
-        enum data_type type = TYPE_STR;
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_CONST, &type, $4.name, counter);
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $4.name, QUADR_ARG_STR, TYPE_STR);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, t_sym_tab, depth_scope, current_function);
@@ -431,6 +429,12 @@ expression: expression ADD expression {
         init_arg_expression(QUAD_OP_MUL, &$1, &$3, &$$);
     }
     | expression DIVIDE expression {
+        if(!$3.is_variable && $3.name[0] == '0')
+            yyerror("Division by zero");
+        if($3.is_variable)
+        {
+            // need to check the data of the variable
+        }
         init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
     }
     | value
@@ -605,17 +609,18 @@ void yyerror(const char* msg) {
                      ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, yytext, yylineno);
     
       // Find the position of yytext in linebuf
-    int position = strstr(linebuf, yytext) - linebuf;
+    int position = strstr(linebuf, yytext) - linebuf + 2;
 
-    fprintf(stderr, "%s\n", linebuf);
+    fprintf(stderr, "| %s\n", linebuf);
     for (int i = 0; i < position; i++) 
-        putchar(' ');
+       fprintf(stderr, " ");
+            
     size_t length = strlen(yytext);
     for (int i = 0; i < length; i++) 
         if(i == 0)
-            putchar('^');
+            fprintf(stderr, "^");
         else
-            putchar('~');
-    printf("\n\n");
+            fprintf(stderr, "~");
+    fprintf(stderr, "\n");
     error_count++;
 }
