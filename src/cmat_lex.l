@@ -1,5 +1,6 @@
 %{
     #include "cmat_yacc.h"
+    void yyerror(const char *s);
     int counter = 1;
     char linebuf[1024];
 %}
@@ -11,6 +12,8 @@
 alpha [a-zA-Z]
 digit [0-9]
 unary "++"|"--"
+
+%x SINGLE_STRING
 
 %%
 
@@ -50,7 +53,8 @@ unary "++"|"--"
     yyless(1); /* give back all but the \n to rescan */
 }
 .	                    { return *yytext; }
-["].*["]                    { strncpy(yylval.node_t.name, yytext, 1024); return STR; }
+["]([^"]|\\(.|\n))*["]                     { strncpy(yylval.node_t.name, yytext, 1024); return STR; }
+
 
 
 %%
