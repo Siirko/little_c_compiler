@@ -1,5 +1,6 @@
 int main()
 {
+    int testFLOAT = 2.234;
     float f = 2.3;
     int i = 2;
     i = 10 + 5;

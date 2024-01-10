@@ -102,6 +102,7 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
 
     char tmp_reg[3] = "t0";
+    char tmp_reg_float[3] = "f0";
     // Debug purposes
     char buf[1024] = {0};
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
@@ -145,6 +146,14 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     else if (arg1_tmp && !res_tmp)
         fprintf(file, "\tsw $%s, %s_%s_%d_%d\n\n", tmp_reg, quadr.res.val, quadr.res.scope.function_name,
                 quadr.res.scope.depth, quadr.res.scope.width);
+    else if (quadr.res.data_type == TYPE_INT)
+    {
+        fprintf(file, "\tmtc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+        fprintf(file, "\tcvt.w.s $%s, $%s\n", tmp_reg_float, tmp_reg_float);
+        fprintf(file, "\tmfc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+        fprintf(file, "\tsw $%s, %s_%s_%d_%d\n\n", tmp_reg, quadr.res.val, quadr.res.scope.function_name,
+                quadr.res.scope.depth, quadr.res.scope.width);
+    }
     else
         fprintf(file, "\tsw $t0, %s_%s_%d_%d\n\n", quadr.res.val, quadr.res.scope.function_name,
                 quadr.res.scope.depth, quadr.res.scope.width);
