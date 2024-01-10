@@ -7,8 +7,9 @@
     #include "../include/hashmap.h"
     #include "../include/symbol.h"
     #include "../include/quadr.h"
-    
-    void yyerror(const char *s);
+    #include "../include/utils.h"
+
+
     int yylex();
     int yywrap();
     extern char* yytext;
@@ -18,6 +19,7 @@
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     symbol_t *check_variable_declaration(char* token);
     
+    extern char linebuf[1024];
     extern int counter;
 
     vec_quadr_t vec_quadr;
@@ -35,6 +37,8 @@
     vec_int_t i_if_end;
 %}
 
+%define parse.error verbose
+
 %union {
     struct node {
         char name[1024];
@@ -49,6 +53,7 @@
     } cond_node_t;
 }
 %{
+    void yyerror(const char *msg);
     void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn);    
 %}
 
@@ -68,7 +73,7 @@
 %type <cond_node_t> condition 
 %left ADD SUBTRACT 
 %left MULTIPLY DIVIDE
-
+%locations
 %%
 
 program: function program
@@ -111,6 +116,7 @@ datatype: INT { data_type = TYPE_INT; }
 
 body: body_element
     | body body_element
+    | body error body_element
     ;
 
 
@@ -589,11 +595,27 @@ symbol_t *check_variable_declaration(char* token) {
                 break;
         }
     }
-    fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
-    error_count++;
+    yyerror("Variable not declared");
     return NULL;
 }
 
 void yyerror(const char* msg) {
-  fprintf(stderr, "%s: '%s' in line %d\n", msg, yytext, yylineno);
+    fprintf(stderr, ANSI_COLOR_CYAN "ERROR: %s: " ANSI_RESET
+                         ANSI_BOLD  "'%s' " ANSI_RESET
+                     ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, yytext, yylineno);
+    
+      // Find the position of yytext in linebuf
+    int position = strstr(linebuf, yytext) - linebuf;
+
+    fprintf(stderr, "%s\n", linebuf);
+    for (int i = 0; i < position; i++) 
+        putchar(' ');
+    size_t length = strlen(yytext);
+    for (int i = 0; i < length; i++) 
+        if(i == 0)
+            putchar('^');
+        else
+            putchar('~');
+    printf("\n\n");
+    error_count++;
 }

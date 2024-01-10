@@ -4,6 +4,7 @@
 #include "../include/mips.h"
 #include "../include/quadr.h"
 #include "../include/symbol.h"
+#include "../include/utils.h"
 #include <stdio.h>
 
 extern int yyparse();
@@ -12,6 +13,7 @@ extern FILE *yyin;
 extern hashmap_t *t_sym_tab;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
+extern int error_count;
 
 struct arguments arguments;
 
@@ -83,6 +85,12 @@ int main(int argc, char *argv[])
 
     if (arguments.show_symbol_table)
         show_symbol_table(t_sym_tab);
+    if (error_count > 0)
+    {
+        fprintf(stderr, ANSI_BOLD ANSI_COLOR_RED "Compilation failed with %d errors\n" ANSI_RESET,
+                error_count);
+        return 1;
+    }
     if (arguments.show_intermediate_code)
     {
         int i;
