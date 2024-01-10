@@ -220,6 +220,8 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     //     quadr.arg2.val = strdup(tmp_reg_int);
     // }
     // else
+    // printf("%s %d %d\n", quadr.res.val, quadr.res.type, quadr.res.data_type);
+    // printf("%s %d %d\n\n", quadr.arg2.val, quadr.arg2.type, quadr.arg2.data_type);
     if (arg2_int)
     {
         if (quadr.arg2.data_type == TYPE_FLOAT)
@@ -237,6 +239,13 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
             fprintf(file, "\tli $%s, %s\n", tmp_reg_int, quadr.arg2.val);
             tmp_reg_int[1]++;
         }
+    }
+    else if (quadr.res.data_type != TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT &&
+             quadr.arg2.data_type == TYPE_INT)
+    {
+        fprintf(file, "\tlw $t1, %s_%s_%d_%d\n", quadr.arg2.val, quadr.arg2.scope.function_name,
+                quadr.arg2.scope.depth, quadr.arg2.scope.width);
+        tmp_reg_int[1]++;
     }
     else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT)
     {
