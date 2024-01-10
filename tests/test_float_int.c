@@ -1,21 +1,23 @@
 int main()
 {
-    int testFLOAT = 2.234;
     float f = 2.3;
-    int i = 2;
-    int fd = 0;
-    i = 10 + 5;
-    f = f + 5.2 / 0;
-    print("dfsfdsdsf");
-    printf("\tdfsfsdfds\"\n");
-    f = f * 4;
-    print(f);
+    int testFLOAT = f;
+    testFLOAT = f * 3.2 + 53.2;
+    print(testFLOAT);
     printf("\n");
-    f = f + f * i;
-    print(f);
-    printf("\n");
-    i = i + 32;
-    print(i);
-    printf("\n");
+    // int i = 2;
+    // i = 10 + 5;
+    // f = f + 5.2 + f;
+    // print(f);
+    // printf("\n");
+    // f = f * 4;
+    // print(f);
+    // printf("\n");
+    // f = f * i * 2;
+    // print(f);
+    // printf("\n");
+    // i = i + 32;
+    // print(i);
+    // printf("\n");
     return 0;
 }

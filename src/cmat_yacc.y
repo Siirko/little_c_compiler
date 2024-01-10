@@ -9,8 +9,8 @@
     #include "../include/symbol.h"
     #include "../include/quadr.h"
     #include "../include/utils.h"
-
-
+    
+    void yyerror(const char *s);
     int yylex();
     int yywrap();
     extern char* yytext;
@@ -308,7 +308,20 @@ inits: init
 
 init: '=' expression {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
+        enum data_type data_type_tmp;
+        if($2.is_variable)
+        {
+            symbol_t *symbol = check_variable_declaration($2.name);
+            data_type_tmp = symbol!= NULL ? symbol->data_type : data_type;
+        }
+        else
+        {
+            if(is_str_float($2.name))
+                data_type_tmp = TYPE_FLOAT;
+            else
+                data_type_tmp = data_type;
+        }
+        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $$.name, $$.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
@@ -534,7 +547,12 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
-        data_type_tmp = data_type;
+    {
+        if(is_str_float(n1->name))
+            data_type_tmp = TYPE_FLOAT;
+        else
+            data_type_tmp = data_type;
+    }
         
     quadr_arg_t arg1 = {0};
     quadr_init_arg(&arg1, n1->name, n1->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
@@ -552,7 +570,12 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
-        data_type_tmp = data_type;
+    {
+        if(is_str_float(n3->name))
+            data_type_tmp = TYPE_FLOAT;
+        else
+            data_type_tmp = data_type;
+    }
     quadr_arg_t arg2 = {0};
     quadr_init_arg(&arg2, n3->name, n3->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
@@ -566,7 +589,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     }
     else if(nn->is_variable)
     {
-        symbol_t *symbol = check_variable_declaration(n3->name);
+        symbol_t *symbol = check_variable_declaration(nn->name);
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
