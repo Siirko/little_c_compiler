@@ -19,6 +19,7 @@
 
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     symbol_t *check_variable_declaration(char* token);
+    bool check_function_declaration(char* token);
     
     extern char linebuf[1024];
     extern int counter;
@@ -46,6 +47,7 @@
         _Bool is_temperorary;
         _Bool is_null;
         _Bool is_variable;
+        _Bool is_function;
     } node_t;
 
     struct cond_node {
@@ -67,7 +69,7 @@
 %type <node_t> iterator iterator_init 
 %type <node_t> printf_statement print_statement
 %type <node_t> program body scope return
-%type <node_t> function function_args function_arg
+%type <node_t> function function_call function_call_args function_call_arg function_args function_arg function_body
 %type <node_t> datatype expression init inits value
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
@@ -96,7 +98,11 @@ function: datatype ID {
         quadr_gencode(is_main ? QUAD_TYPE_LABEL : QUAD_TYPE_LABEL_FUNCTION, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, 
                         res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         depth_scope = 0;
-    } '(' function_args ')' '{' body return '}'
+    } '(' function_args ')' '{' function_body '}'
+    ;
+
+function_body:  body return 
+    | return
     ;
 
 function_args: function_arg
@@ -290,8 +296,10 @@ statement: datatype ID {
             data_type = symbol->data_type;
     } '=' expression {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-
+        if(!$4.is_function)
+            quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
+        else
+            quadr_init_arg(&arg1, "v0", QUADR_ARG_RETURN_FUNCTION, data_type);
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
@@ -312,7 +320,7 @@ inits: init
 init: '=' expression {
         quadr_arg_t arg1 = {0};
         enum data_type data_type_tmp;
-        if($2.is_variable)
+        if($2.is_variable && !$2.is_temperorary && !$2.is_function)
         {
             symbol_t *symbol = check_variable_declaration($2.name);
             data_type_tmp = symbol!= NULL ? symbol->data_type : data_type;
@@ -456,8 +464,33 @@ expression: expression ADD expression {
             init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
     }
     | value
+    | function_call
     ;
 
+function_call: ID { 
+        $1.is_function = check_function_declaration($1.name);
+    } '(' function_call_args ')' {
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, $1.name, QUADR_ARG_STR, TYPE_STR);
+        quadr_gencode(QUAD_TYPE_CALL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    }
+    ;
+
+function_call_args: function_call_arg
+    | function_call_args ',' function_call_arg
+    ;
+
+function_call_arg: expression {
+        quadr_arg_t arg1 = {0};
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
+        quadr_gencode(QUAD_TYPE_PARAM_CALL, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        if($1.is_temperorary)
+        {
+            temp_var = 0;
+            $1.is_temperorary = false;
+        }
+    }
+    ;
 
 
 
@@ -629,7 +662,17 @@ symbol_t *check_variable_declaration(char* token) {
         }
     }
     yyerror("Variable not declared");
+    printf("%s\n", current_function);
     return NULL;
+}
+
+bool check_function_declaration(char* token) {
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, current_function);
+    if(v_scopes != NULL)
+        return true;
+    yyerror("Function not declared");
+    printf("%s\n", current_function);
+    return false;
 }
 
 void yyerror(const char* msg) {
