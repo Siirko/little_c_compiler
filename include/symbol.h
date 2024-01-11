@@ -28,7 +28,7 @@ enum data_type
 #undef X
 
 #define SYMBOL_MAX_SIZE 1024
-
+typedef vec_t(enum data_type) vec_data_type_t;
 typedef struct symbol
 {
     char id[SYMBOL_MAX_SIZE];
@@ -59,6 +59,11 @@ void add_symbol(hashmap_t *symbol_table, enum symbol_type type, enum data_type *
 void show_symbol(char *id, void *symbol);
 
 void free_scopes(char *id, void *scopes);
+void free_func_args(char *id, void *func_args);
+
+int get_function_total_args(char *id, hashmap_t *func_args);
+
+enum data_type get_data_type_from_function(char *id, int index, hashmap_t *func_args);
 
 void show_symbol_table(hashmap_t *symbol_table);
 

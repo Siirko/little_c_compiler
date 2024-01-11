@@ -1,9 +1,10 @@
-int add(int a, int b) { return a + b; }
+int add(int a, int b, int c) { return a + b + c; }
 
 int main()
 {
     int a;
-    a = add(2, 3);
+    int b = 2;
+    a = add(2 + 2, 3, 23);
     print(a);
     // float f = 2.3;
     // float ttt = f;

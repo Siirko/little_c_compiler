@@ -26,8 +26,12 @@
 
     vec_quadr_t vec_quadr;
     hashmap_t *t_sym_tab;
+    hashmap_t *func_args;
     enum data_type data_type;
     char current_function[1024] = {0};
+    char current_function_call[1024] = {0};
+    int counter_func_args = 0;
+    int counter_func_args_waited = 0;
     bool is_for = false;
     bool is_while = false;
     bool in_if_condition = false;
@@ -114,8 +118,22 @@ function_arg: datatype ID {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $2.name, QUADR_ARG_STR, data_type);
         quadr_gencode(QUAD_TYPE_PARAM_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+
+        vec_data_type_t *v_data_type = (vec_data_type_t *)hashmap_get(func_args, current_function);
+        if(v_data_type == NULL)
+        {
+            vec_data_type_t v_data_type_tmp = {0};
+            vec_push(&v_data_type_tmp, data_type);
+            hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
+        }
+        else
+            vec_push(v_data_type, data_type);
     }
-    | %empty
+    | %empty {
+        vec_data_type_t v_data_type_tmp = {0};
+        vec_push(&v_data_type_tmp, data_type);
+        hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
+    }
     ;
    
 
@@ -469,10 +487,20 @@ expression: expression ADD expression {
 
 function_call: ID { 
         $1.is_function = check_function_declaration($1.name);
+        if($1.is_function)
+            sprintf(current_function_call, "%s", $1.name);
+        counter_func_args_waited = get_function_total_args(current_function_call, func_args);
+        if(counter_func_args_waited == 0)
+            yyerror("Function doesn't have any arguments");
+        else if(counter_func_args_waited < 0)
+            yyerror("Function not declared");
     } '(' function_call_args ')' {
+        if(counter_func_args < counter_func_args_waited)
+            yyerror("Not enough arguments");
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $1.name, QUADR_ARG_STR, TYPE_STR);
         quadr_gencode(QUAD_TYPE_CALL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        counter_func_args = 0;
     }
     ;
 
@@ -481,6 +509,51 @@ function_call_args: function_call_arg
     ;
 
 function_call_arg: expression {
+        if($1.is_variable)
+        {
+            symbol_t *symbol = check_variable_declaration($1.name);
+            if(symbol != NULL)
+            {
+                enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+                if(symbol->data_type != data_type_tmp)
+                    yyerror("Invalid type");
+                if(counter_func_args > counter_func_args_waited)
+                    yyerror("Too many arguments");
+                else if(counter_func_args < counter_func_args_waited)
+                    counter_func_args++;
+            }
+        }
+        else if($1.is_temperorary)
+        {
+            enum data_type data_type_chk = $1.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_chk != data_type_tmp)
+                yyerror("Invalid type");
+            if(counter_func_args > counter_func_args_waited)
+                yyerror("Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
+        else if(is_str_float($1.name))
+        {
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_tmp != TYPE_FLOAT)
+                yyerror("Invalid type");
+            if(counter_func_args > counter_func_args_waited)
+                yyerror("Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
+        else 
+        {
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_tmp != TYPE_INT)
+                yyerror("Invalid type");
+            if(counter_func_args >= counter_func_args_waited)
+                yyerror("Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
         quadr_gencode(QUAD_TYPE_PARAM_CALL, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
