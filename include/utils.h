@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
+#include <string.h>
 
 #define ANSI_COLOR_RED "\x1b[31m"
 #define ANSI_COLOR_GREEN "\x1b[32m"
@@ -66,12 +67,17 @@ static inline _Bool is_str_float(const char *str)
     char *endptr;
     errno = 0;
     strtof(str, &endptr);
-    if (errno == ERANGE)
+    if (str == endptr)
         return false;
-    if (endptr == str)
+    while (isspace((unsigned char)*endptr))
+        endptr++;
+    if (*endptr || errno)
         return false;
-    for (; *endptr != '\0'; endptr++)
-        if (!isspace(*endptr))
-            return false;
+
+    // at this state we know that the string is a float
+    // but we need to check if contains . because
+    // apparently decimal numbers are considered as floats
+    if (strchr(str, '.') == NULL)
+        return false;
     return true;
 }

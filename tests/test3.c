@@ -36,5 +36,5 @@ int main()
     printf("\n");
     printf("AAAAAAAAAAAAA\n");
     int zizi = 0;
-    // return 2;
+    return 2;
 }
