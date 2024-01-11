@@ -9,7 +9,7 @@
 int main()
 {
     int a = 0;
-    int e = 2;
+    int e = -2;
     float b = 2.3;
     float emp;
 
@@ -17,7 +17,7 @@ int main()
     {
         for (int i = 0; i < 10; i++)
         {
-            a = a + 1 + e;
+            a = a + 1 * 2;
             b = b + e - 2;
         }
     }
