@@ -108,7 +108,9 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
     fprintf(file, buf, quadr.res.val, quadr.arg1.val);
     ////////////////////////////////////////////////
-    if (arg1_int)
+    if (quadr.arg1.type == QUADR_ARG_RETURN_FUNCTION)
+        fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
+    else if (arg1_int)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else if (arg1_float)
     {
@@ -395,8 +397,26 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
     {
         switch (quadr.type)
         {
+        case QUAD_TYPE_PARAM_CALL:
+        {
+            static char param_reg[3] = "a0";
+            if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\tli $%s $%s\n", param_reg, quadr.arg1.val);
+            else if (quadr.arg1.data_type == TYPE_INT)
+                fprintf(file, "\tli $%s %s\n", param_reg, quadr.arg1.val);
+            param_reg[1]++;
+            break;
+        }
+        case QUAD_TYPE_CALL:
+        {
+            fprintf(file, "\tjal %s\n", quadr.res.val);
+            break;
+        }
         case QUAD_TYPE_PARAM_FUNCTION:
         {
+            if (function_arg_index == -1)
+                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
+                              "\tsw $s0, 0($sp) # Save return address\n\n");
             fprintf(file, "\tsw $a%d, %s_%s_%d_%d\n", ++function_arg_index, quadr.arg1.val,
                     quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
             break;
@@ -410,6 +430,8 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
             else
                 fprintf(file, "\tlw $v0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                         quadr.arg1.scope.depth, quadr.arg1.scope.width);
+            fprintf(file, "\n\tlw $s0, 0($sp) # Load previous value\n"
+                          "\taddi $sp,$sp,4 # Moving Stack pointer\n");
             fprintf(file, "\tjr $ra\n");
             break;
         }

@@ -23,7 +23,8 @@
     /* ex: param a, param b, call sqrt, 2*/                                                                  \
     X(QUAD_TYPE_PARAM_CALL, "param %s\n")                                                                    \
     X(QUAD_TYPE_PARAM_FUNCTION, "func_param %s\n")                                                           \
-    X(QUAD_TYPE_CALL, "call %s, %s\n")                                                                       \
+    X(QUAD_TYPE_CALL, "call %s\n")                                                                           \
+    X(QUAD_TYPE_CALL_FUNCTION_RETURN, "func_arg_return %s\n")                                                \
     X(QUAD_TYPE_LABEL, "\n%s:\n")                                                                            \
     X(QUAD_TYPE_LABEL_FUNCTION, "\nFUNCTION %s:\n")                                                          \
     X(QUAD_TYPE_SYSCALL_PRINT_STR, "print_str(%s)\n")                                                        \
@@ -71,6 +72,7 @@ typedef struct quadr_arg
         QUADR_ARG_TMP_VAR,
         QUADR_ARG_LABEL,
         QUADR_ARG_GOTO,
+        QUADR_ARG_RETURN_FUNCTION,
     } type;
     // only used when
     // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
