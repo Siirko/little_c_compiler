@@ -8,6 +8,7 @@ int main()
     print(testFLOAT);
     printf("\n\n");
     int i = 2;
+    int fd = 0;
     i = 10 + 5;
     f = f + 5.2 * 2 * 2.1 * f * 1.01;
     print(f);

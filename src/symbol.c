@@ -1,4 +1,5 @@
 #include "../include/symbol.h"
+#include "../include/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -121,7 +122,7 @@ void show_symbol(char *id, void *symbol)
         return;
     }
     symbol_t *s = (symbol_t *)symbol;
-    printf("%-10s%-10s%-10s%-10d\n", s->id, symbol_type_str[s->type], data_type_str[s->data_type], s->line);
+    printf("%-20s%-20s%-20s%-20d\n", s->id, symbol_type_str[s->type], data_type_str[s->data_type], s->line);
 }
 
 void show_symbol_table(hashmap_t *symbol_table)
@@ -133,17 +134,17 @@ void show_symbol_table(hashmap_t *symbol_table)
         if (!hashmap_iter_has_next(&iter))
             continue;
         char *key = iter.node->key;
-        printf("Function: %s\n", key);
+        printf(ANSI_COLOR_MAGENTA ANSI_BOLD "Table of Symbols for: %s\n" ANSI_RESET, key);
         vec_vec_hashmap_t v_scopes = *(vec_vec_hashmap_t *)hashmap_get(symbol_table, key);
         int i;
         vec_hashmap_t tmp;
-        printf("%-10s%-10s%-10s%-10s\n", "ID", "TYPE", "DATA_TYPE", "LINE");
+        printf("%-20s%-20s%-20s%-20s\n", "ID", "TYPE", "DATA_TYPE", "LINE");
         vec_foreach(&v_scopes, tmp, i)
         {
             if (tmp.length == 0)
                 continue;
-            printf("Scope %d\n", i);
-            printf("---------\n");
+            printf("\nScope %d\n", i);
+            printf("+-------------------------------------------------------------+\n");
             int j;
             hashmap_t *tmp2;
             vec_foreach(&tmp, tmp2, j)
@@ -151,9 +152,10 @@ void show_symbol_table(hashmap_t *symbol_table)
                 if (tmp2->count == 0)
                     continue;
                 hashmap_iterate(tmp2, show_symbol);
-                printf("\n");
+                printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
             }
         }
+
     } while (hashmap_iter_next(&iter));
 }
 

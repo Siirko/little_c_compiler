@@ -2,14 +2,15 @@
     #include <stdio.h>
     #include <string.h>
     #include <stdlib.h>
+    #include <unistd.h>
     #include <ctype.h>
     #include <stdbool.h>
     #include "../include/hashmap.h"
     #include "../include/symbol.h"
     #include "../include/quadr.h"
     #include "../include/utils.h"
-    
-    void yyerror(const char *s);
+
+
     int yylex();
     int yywrap();
     extern char* yytext;
@@ -19,6 +20,7 @@
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
     symbol_t *check_variable_declaration(char* token);
     
+    extern char linebuf[1024];
     extern int counter;
 
     vec_quadr_t vec_quadr;
@@ -36,6 +38,8 @@
     vec_int_t i_if_end;
 %}
 
+%define parse.error verbose
+
 %union {
     struct node {
         char name[1024];
@@ -50,6 +54,7 @@
     } cond_node_t;
 }
 %{
+    void yyerror(const char *msg);
     void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn);    
 %}
 
@@ -69,7 +74,7 @@
 %type <cond_node_t> condition 
 %left ADD SUBTRACT 
 %left MULTIPLY DIVIDE
-
+%locations
 %%
 
 program: function program
@@ -112,6 +117,7 @@ datatype: INT { data_type = TYPE_INT; }
 
 body: body_element
     | body body_element
+    | body error body_element
     ;
 
 
@@ -369,8 +375,6 @@ printf_statement: PRINTF {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_KEYWORD, &data_type, yytext, counter); 
     } '(' STR ')' ';'
     { 
-        enum data_type type = TYPE_STR;
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_CONST, &type, $4.name, counter);
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $4.name, QUADR_ARG_STR, TYPE_STR);
         quadr_gencode(QUAD_TYPE_SYSCALL_PRINT_STR, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  &vec_quadr, t_sym_tab, depth_scope, current_function);
@@ -379,7 +383,8 @@ printf_statement: PRINTF {
 
 print_statement: PRINT '(' ID { 
         symbol_t *symbol = check_variable_declaration($3.name);
-        data_type = symbol->data_type;
+        if(symbol != NULL)
+            data_type = symbol->data_type;
     } ')' ';' 
     {
         quadr_arg_t arg1 = {0};
@@ -399,8 +404,7 @@ print_statement: PRINT '(' ID {
             }
             default:
             {
-                fprintf(stderr, "Error: can't print %s at line %d\n", $3.name, counter);
-                error_count++;
+                yyerror("Invalid type");
                 break;
             }
         }
@@ -439,7 +443,14 @@ expression: expression ADD expression {
         init_arg_expression(QUAD_OP_MUL, &$1, &$3, &$$);
     }
     | expression DIVIDE expression {
-        init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
+        if(!$3.is_variable && $3.name[0] == '0')
+            yyerror("Division by zero");
+        else if($3.is_variable)
+        {
+            // need to check the data of the variable
+        }
+        else
+            init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
     }
     | value
     ;
@@ -614,11 +625,29 @@ symbol_t *check_variable_declaration(char* token) {
                 break;
         }
     }
-    fprintf(stderr, "Variable %s is not declared at line %d\n", token, counter);
-    error_count++;
+    yyerror("Variable not declared");
     return NULL;
 }
 
 void yyerror(const char* msg) {
-  fprintf(stderr, "%s: '%s' in line %d\n", msg, yytext, yylineno);
+    fprintf(stderr, ANSI_COLOR_CYAN "ERROR: %s: " ANSI_RESET
+                         ANSI_BOLD  "'%s' " ANSI_RESET
+                     ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, yytext, yylineno);
+    
+    if(yylloc.first_line)
+    {
+        /* fprintf(stderr, "%d.%d-%d.%d: error\n", yylloc.first_line, yylloc.first_column,
+        yylloc.last_line, yylloc.last_column); */
+        fprintf(stderr, "%s\n", linebuf);
+        int len = yylloc.last_column - yylloc.first_column;
+        for(int i = 0; i < yylloc.first_column-1; ++i)
+            fprintf(stderr, " ");
+        for(int i = 0; i < len; ++i)
+            if(i == 0)
+                fprintf(stderr, "^");
+            else
+                fprintf(stderr, "~");
+        fprintf(stderr, "\n");
+    }
+    error_count++;
 }
