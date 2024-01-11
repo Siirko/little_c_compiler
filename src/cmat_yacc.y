@@ -87,6 +87,9 @@ function: datatype ID {
         sprintf(current_function, "%s", $2.name);
         
         _Bool is_main = strcmp(current_function, "main") == 0;
+        static int main_counter = 0;
+        if(is_main && main_counter++ > 0)
+            yyerror("Main function already declared");
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, current_function, QUADR_ARG_LABEL, TYPE_STR);
