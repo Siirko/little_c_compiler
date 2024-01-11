@@ -328,9 +328,9 @@ init: '=' expression {
         }
     }
     | ID {
-        symbol_t *symbol = check_variable_declaration($1.name);
-        if(symbol != NULL)
-            data_type = symbol->data_type;
+        // symbol_t *symbol = check_variable_declaration($1.name);
+        // if(symbol != NULL)
+        //     data_type = symbol->data_type;
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
         quadr_arg_t arg1 = {0};
         if(data_type == TYPE_INT)
@@ -520,7 +520,7 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
 void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn)
 {
     char var = data_type == TYPE_INT ? 't' : 'f';
-    sprintf(nn->name, "%c%d", var, temp_var++);
+    sprintf(nn->name, "%c%d", var, ++temp_var);
     nn->is_temperorary = true;
     enum data_type data_type_tmp;
     if(n1->is_temperorary)
@@ -592,6 +592,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg2, arg1, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     else
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    temp_var = 0;
 }
 
 symbol_t *check_variable_declaration(char* token) {

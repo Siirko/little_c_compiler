@@ -48,4 +48,5 @@ int main()
     {
         zzzzzzzzzzzz = 4;
     }
+    return 0;
 }
