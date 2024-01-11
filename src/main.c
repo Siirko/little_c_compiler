@@ -91,6 +91,13 @@ int main(int argc, char *argv[])
                 error_count);
         return 1;
     }
+    // detect if there is a main function
+    symbol_t *main_func = hashmap_get(t_sym_tab, "main");
+    if (main_func == NULL)
+    {
+        fprintf(stderr, ANSI_BOLD ANSI_COLOR_RED "No main function found\n" ANSI_RESET);
+        return 1;
+    }
     if (arguments.show_intermediate_code)
     {
         int i;
