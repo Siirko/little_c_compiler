@@ -401,7 +401,7 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             static char param_reg[3] = "a0";
             if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
-                fprintf(file, "\tli $%s $%s\n", param_reg, quadr.arg1.val);
+                fprintf(file, "\tmove $%s $%s\n", param_reg, quadr.arg1.val);
             else if (quadr.arg1.data_type == TYPE_INT)
                 fprintf(file, "\tli $%s %s\n", param_reg, quadr.arg1.val);
             param_reg[1]++;
