@@ -110,9 +110,9 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     ////////////////////////////////////////////////
     if (quadr.arg1.type == QUADR_ARG_RETURN_FUNCTION)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
-    else if (arg1_int)
+    else if (arg1_int && quadr.res.data_type != TYPE_FLOAT)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
-    else if (arg1_float)
+    else if (arg1_float || (quadr.res.data_type == TYPE_FLOAT && quadr.arg1.data_type == TYPE_INT))
     {
         float f = strtof(quadr.arg1.val, NULL);
         fprintf(file, "\tli $t0, 0x%08X\n", *(unsigned int *)&f);
@@ -130,6 +130,13 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
         else
             fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
     }
+    // else if (quadr.res.data_type == TYPE_INT)
+    // {
+    //     printf("%s %d %d\n", quadr.arg1.val, quadr.arg1.data_type);
+    //     fprintf(file, "\tmtc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+    //     fprintf(file, "\tcvt.w.s $%s, $%s\n", tmp_reg_float, tmp_reg_float);
+    //     fprintf(file, "\tmfc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+    // }
     else
         fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                 quadr.arg1.scope.depth, quadr.arg1.scope.width);

@@ -320,6 +320,7 @@ statement: datatype ID {
             data_type = symbol->data_type;
     } '=' expression {
         quadr_arg_t arg1 = {0};
+        
         if(!$4.is_function)
             quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
         else
@@ -354,8 +355,9 @@ init: '=' expression {
             if(is_str_float($2.name))
                 data_type_tmp = TYPE_FLOAT;
             else
-                data_type_tmp = data_type;
+                data_type_tmp = TYPE_INT;
         }
+        printf("%s %d %s %d\n",$$.name, data_type, $2.name, data_type_tmp);
         quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
         quadr_arg_t res = {0};
