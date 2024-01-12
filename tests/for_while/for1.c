@@ -1,15 +1,7 @@
-// int func123(int a, int b)
-// {
-//     int tmp = a + b;
-//     return 2 + tmp;
-// }
-// #define print(x) printf("%d", x)
-// #define _print(x) printf("%f", x)
-
 int main()
 {
     int a = 0;
-    int e = -2;
+    int e = 2;
     float b = 2.3;
     float emp;
 

@@ -104,8 +104,9 @@ int get_function_total_args(char *id, hashmap_t *func_args)
     if (vec_data_type == NULL)
         return -1;
     if (vec_data_type->length == 1)
-        if (vec_data_type->data[0] == 0)
+        if (vec_data_type->data[0] == -1)
             return 0;
+    // printf("%s %d\n", id, vec_data_type->length);
     return vec_data_type->length;
 }
 

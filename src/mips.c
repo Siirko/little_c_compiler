@@ -110,9 +110,9 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     ////////////////////////////////////////////////
     if (quadr.arg1.type == QUADR_ARG_RETURN_FUNCTION)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
-    else if (arg1_int)
+    else if (arg1_int && quadr.res.data_type != TYPE_FLOAT)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
-    else if (arg1_float)
+    else if (arg1_float || (quadr.res.data_type == TYPE_FLOAT && quadr.arg1.data_type == TYPE_INT))
     {
         float f = strtof(quadr.arg1.val, NULL);
         fprintf(file, "\tli $t0, 0x%08X\n", *(unsigned int *)&f);
@@ -130,6 +130,13 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
         else
             fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
     }
+    // else if (quadr.res.data_type == TYPE_INT)
+    // {
+    //     printf("%s %d %d\n", quadr.arg1.val, quadr.arg1.data_type);
+    //     fprintf(file, "\tmtc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+    //     fprintf(file, "\tcvt.w.s $%s, $%s\n", tmp_reg_float, tmp_reg_float);
+    //     fprintf(file, "\tmfc1 $%s, $%s\n", tmp_reg, tmp_reg_float);
+    // }
     else
         fprintf(file, "\tlw $t0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                 quadr.arg1.scope.depth, quadr.arg1.scope.width);
@@ -203,7 +210,6 @@ void mips_operation_gen(quadr_t *quadr, FILE *file, char *tmp_reg_int, char *tmp
         fprintf(file, "\tmov.s $f0, $%s\n", quadr->res.val);
     else
         fprintf(file, "\tmove $t0, $%s\n", quadr->res.val);
-    // }
 }
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
@@ -328,7 +334,7 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT)
     {
-        tmp_reg_float[1]++;
+        // tmp_reg_float[1]++;
         fprintf(file, "\tl.s $%s, %s_%s_%d_%d\n", tmp_reg_float, quadr.arg2.val,
                 quadr.arg2.scope.function_name, quadr.arg2.scope.depth, quadr.arg2.scope.width);
     }
@@ -347,8 +353,12 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     else
     {
-        tmp_reg_int[1]++;
-        tmp_reg_float[1]++;
+        // this code is a real mess hihi im loosing my mind
+        if (tmp_reg_int[1] != '1')
+        {
+            tmp_reg_int[1]++;
+            tmp_reg_float[1]++;
+        }
         fprintf(file, "\tlw $%s, %s_%s_%d_%d\n", tmp_reg_int, quadr.arg2.val, quadr.arg2.scope.function_name,
                 quadr.arg2.scope.depth, quadr.arg2.scope.width);
         fprintf(file, "\tmtc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_int[1]);
@@ -455,9 +465,6 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         }
         case QUAD_TYPE_PARAM_FUNCTION:
         {
-            if (function_arg_index == -1)
-                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
-                              "\tsw $s0, 0($sp) # Save return address\n\n");
             fprintf(file, "\tsw $a%d, %s_%s_%d_%d\n", ++function_arg_index, quadr.arg1.val,
                     quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
             break;
@@ -494,6 +501,9 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         case QUAD_TYPE_LABEL_FUNCTION:
         {
             fprintf(file, "%s:\n", quadr.res.val);
+            if (function_arg_index == -1)
+                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
+                              "\tsw $s0, 0($sp) # Save return address\n\n");
             break;
         }
         case QUAD_TYPE_LABEL:

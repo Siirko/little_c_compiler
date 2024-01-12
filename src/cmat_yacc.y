@@ -111,7 +111,7 @@ function: datatype ID {
     } '(' function_args ')' '{' function_body '}'
     ;
 
-function_body:  body return 
+function_body: body return
     | return
     ;
 
@@ -137,7 +137,7 @@ function_arg: datatype ID {
     }
     | %empty {
         vec_data_type_t v_data_type_tmp = {0};
-        vec_push(&v_data_type_tmp, data_type);
+        vec_push(&v_data_type_tmp, -1);
         hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
     }
     ;
@@ -160,6 +160,7 @@ body_element: for_statement
     | statement ';'
     | printf_statement
     | print_statement
+    /* | return */
     ;
 
 scope: '{' { 
@@ -179,10 +180,10 @@ scope: '{' {
     ;
 
 while_statement: WHILE { 
-        is_while = true; 
-    } '(' condition ')' {
-       
-    } scope {
+        is_while = true;
+        is_for = false;
+        printf("while statement\n");
+    } '(' condition ')' scope {
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -206,6 +207,7 @@ for_statement: FOR {
 
 if_statement: IF { 
         is_for = false;
+        is_while = false;
         in_if_condition = true;
         ++if_counter;
     } '(' condition ')' {
@@ -266,8 +268,11 @@ iterator: ID {
         quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
         quadr_arg_t _res = {0};
         quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
-
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        
+        bool is_add = strcmp($3.name, "++") == 0;
+        printf("%s\n", $3.name);
+        enum quad_ops op = is_add ? QUAD_OP_ADD : QUAD_OP_SUB;
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         temp_var = 0;
     }
@@ -275,11 +280,14 @@ iterator: ID {
 iterator_init: datatype ID {
         ++depth_scope;
         vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, current_function);
-        if (v_scopes->length - 1 < depth_scope)
-            vec_push(v_scopes, (vec_hashmap_t){0});
-        // missing a condition here
-        vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
+        if(v_scopes !=  NULL)
+        {
+            if (v_scopes->length - 1 < depth_scope)
+                vec_push(v_scopes, (vec_hashmap_t){0});
+            // missing a condition here
+            vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
+            add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
+        }
     } '=' value {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $5.name, $5.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
@@ -320,6 +328,7 @@ statement: datatype ID {
             data_type = symbol->data_type;
     } '=' expression {
         quadr_arg_t arg1 = {0};
+        
         if(!$4.is_function)
             quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
         else
@@ -335,6 +344,7 @@ statement: datatype ID {
         if($1.is_temperorary)
             $1.is_temperorary = false;
     }
+    | iterator
     ;
 
 inits: init
@@ -354,7 +364,7 @@ init: '=' expression {
             if(is_str_float($2.name))
                 data_type_tmp = TYPE_FLOAT;
             else
-                data_type_tmp = data_type;
+                data_type_tmp = TYPE_INT;
         }
         quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
@@ -487,6 +497,9 @@ expression: expression ADD expression {
         else
             init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$, @1, @3, @$);
     }
+    | '(' expression ')' {
+        $$ = $2;
+    }
     | value
     | function_call
     ;
@@ -496,9 +509,9 @@ function_call: ID {
         if($1.is_function)
             sprintf(current_function_call, "%s", $1.name);
         counter_func_args_waited = get_function_total_args(current_function_call, func_args);
-        if(counter_func_args_waited == 0)
-            lyyerror(@1, "Function doesn't have any arguments");
-        else if(counter_func_args_waited < 0)
+        // if(counter_func_args_waited == 0)
+        //     lyyerror(@1, "Function doesn't have any arguments");
+        if(counter_func_args_waited < 0)
             lyyerror(@1, "Function not declared");
     } '(' function_call_args ')' {
         if(counter_func_args < counter_func_args_waited)
@@ -515,7 +528,9 @@ function_call_args: function_call_arg
     ;
 
 function_call_arg: expression {
-        if($1.is_variable && !$1.is_temperorary && !$1.is_function)
+        if(counter_func_args_waited == 0)
+            lyyerror(@1, "Function doesn't have any arguments");
+        else if($1.is_variable && !$1.is_temperorary && !$1.is_function)
         {
             symbol_t *symbol = check_variable_declaration(@1, $1.name);
             if(symbol != NULL)
@@ -569,6 +584,7 @@ function_call_arg: expression {
             $1.is_temperorary = false;
         }
     }
+    | %empty
     ;
 
 
@@ -588,24 +604,25 @@ return: RETURN {
         quadr_arg_t arg1 = {0};
 
         quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-        symbol_t *symbol = check_variable_declaration(@3, current_function);
-        if($3.is_temperorary && $3.is_variable && symbol != NULL)
+        symbol_t *func_sym = check_variable_declaration(@3, current_function);
+        if($3.is_temperorary && $3.is_variable && func_sym != NULL)
         {
             enum data_type data_type_tmp = $3.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
-            if(symbol->data_type != data_type_tmp)
-                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+            if(func_sym->data_type != data_type_tmp)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", func_sym->data_type == TYPE_INT ? "int" : "float");
         }
-        else if(!$3.is_temperorary && $3.is_variable && symbol != NULL)
+        else if(!$3.is_temperorary && $3.is_variable && func_sym != NULL)
         {
-            if(symbol->data_type != data_type)
-                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+            symbol_t *var_sym = check_variable_declaration(@3, $3.name);
+            if(var_sym != NULL && func_sym->data_type != var_sym->data_type)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", func_sym->data_type == TYPE_INT ? "int" : "float");
         }
-        else if(symbol != NULL)
+        else if(func_sym != NULL)
         {
             bool is_float = is_str_float($3.name);
-            if(is_float && symbol->data_type != TYPE_FLOAT)
+            if(is_float && func_sym->data_type != TYPE_FLOAT)
                 lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "int");
-            else if(!is_float && symbol->data_type != TYPE_INT)
+            else if(!is_float && func_sym->data_type != TYPE_INT)
                 lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "float");
         }
         _Bool is_main = strcmp(current_function, "main") == 0;
@@ -709,6 +726,15 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
             data_type_tmp = TYPE_FLOAT;
         else
             data_type_tmp = data_type;
+        
+        if(op_exp == QUAD_OP_SUB)
+        {
+            /* // shift right of offset value of the n3->name
+            size_t len = strlen(n3->name)+1;
+            if(len < 1024)
+                memmove(n3->name+1, n3->name, len);
+            n3->name[0] = '-'; */
+        }
     }
     quadr_arg_t arg2 = {0};
     quadr_init_arg(&arg2, n3->name, n3->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
