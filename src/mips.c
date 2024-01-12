@@ -328,7 +328,7 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT)
     {
-        tmp_reg_float[1]++;
+        // tmp_reg_float[1]++;
         fprintf(file, "\tl.s $%s, %s_%s_%d_%d\n", tmp_reg_float, quadr.arg2.val,
                 quadr.arg2.scope.function_name, quadr.arg2.scope.depth, quadr.arg2.scope.width);
     }
