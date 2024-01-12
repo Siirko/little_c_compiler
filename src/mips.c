@@ -108,7 +108,9 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     sprintf(buf, "\t# %s", quad_type_str[quadr.type]);
     fprintf(file, buf, quadr.res.val, quadr.arg1.val);
     ////////////////////////////////////////////////
-    if (arg1_int)
+    if (quadr.arg1.type == QUADR_ARG_RETURN_FUNCTION)
+        fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
+    else if (arg1_int)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
     else if (arg1_float)
     {
@@ -226,6 +228,21 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
             fprintf(file, "\tmove $%s, $%s\n", quadr.arg1.val, tmp_reg_int);
         else if (quadr.arg1.data_type == TYPE_FLOAT)
             fprintf(file, "\tmov.s $%s, $%s\n", quadr.arg1.val, tmp_reg_float);
+        // if we have t1 = t1 op t1
+        // or f1 = f1 op f1
+        // call directely the operation
+        bool res_arg1 = strcmp(quadr.res.val, quadr.arg1.val) == 0;
+        bool res_arg2 = strcmp(quadr.res.val, quadr.arg2.val) == 0;
+        bool arg1_arg2 = strcmp(quadr.arg1.val, quadr.arg2.val) == 0;
+        if (res_arg1 && res_arg2 && arg1_arg2)
+        {
+            quadr.arg1.val = strdup(tmp_reg_int);
+
+            mips_operation_gen(&quadr, file, tmp_reg_int, tmp_reg_float, quadr.op,
+                               op_type_int[quadr.res.data_type]);
+            free(quadr.arg1.val);
+            return;
+        }
         quadr.arg1.val = strdup(tmp_reg_int);
     }
     else if (arg1_int)
@@ -311,9 +328,9 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type != QUADR_ARG_FLOAT)
     {
+        tmp_reg_float[1]++;
         fprintf(file, "\tl.s $%s, %s_%s_%d_%d\n", tmp_reg_float, quadr.arg2.val,
                 quadr.arg2.scope.function_name, quadr.arg2.scope.depth, quadr.arg2.scope.width);
-        tmp_reg_float[1]++;
     }
     else if (quadr.arg2.data_type == TYPE_FLOAT && quadr.arg2.type == QUADR_ARG_FLOAT)
     {
@@ -321,11 +338,11 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
             tmp_reg_float[1]++;
         float f = strtof(quadr.arg2.val, NULL);
         fprintf(file, "\tli $%s, 0x%08X\n", tmp_reg_int, *(unsigned int *)&f);
-        fprintf(file, "\tmtc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_int[1]);
+        fprintf(file, "\tmtc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_float[1]);
         if (quadr.res.data_type == TYPE_INT)
         {
-            fprintf(file, "\tcvt.w.s $f%c, $f%c\n", tmp_reg_int[1], tmp_reg_int[1]);
-            fprintf(file, "\tmfc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_int[1]);
+            fprintf(file, "\tcvt.w.s $f%c, $f%c\n", tmp_reg_float[1], tmp_reg_float[1]);
+            fprintf(file, "\tmfc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_float[1]);
         }
     }
     else
@@ -391,12 +408,56 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
     int function_arg_index = -1;
     int i;
     quadr_t quadr;
+    static char param_reg[3] = "a0";
     vec_foreach(vec_quadr, quadr, i)
     {
         switch (quadr.type)
         {
+        case QUAD_TYPE_PARAM_CALL:
+        {
+            if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+                fprintf(file, "\tmove $%s $%s\n", param_reg, quadr.arg1.val);
+            // ex: li $a0, 2
+            else if (quadr.arg1.type != QUADR_ARG_STR && quadr.arg1.type == QUADR_ARG_INT)
+                fprintf(file, "\tli $%s %s\n", param_reg, quadr.arg1.val);
+            // ex: lw $a0, a_0_0_0
+            else if (quadr.arg1.type == QUADR_ARG_STR && quadr.arg1.data_type == TYPE_INT)
+                fprintf(file, "\tlw $%s %s_%s_%d_%d\n", param_reg, quadr.arg1.val,
+                        quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
+            // ex: li $t0, 0x41BA6666
+            //     mtc1 $t0, $f0
+            //     cvt.s.w $f0, $f0
+            //     mfc1 $a0, $f0
+            else if (quadr.arg1.type != QUADR_ARG_STR && quadr.arg1.type == QUADR_ARG_FLOAT)
+            {
+                float f = strtof(quadr.arg1.val, NULL);
+                fprintf(file, "\tli $t0, 0x%08X\n", *(unsigned int *)&f);
+                fprintf(file, "\tmtc1 $t0, $f0\n");
+                fprintf(file, "\tmfc1 $%s, $f0\n", param_reg);
+            }
+            // ex: l.s $f0, a_0_0_0
+            //     mfc1 $a0, $f0
+            else if (quadr.arg1.type == QUADR_ARG_STR && quadr.arg1.data_type == TYPE_FLOAT)
+            {
+                fprintf(file, "\tl.s $f0 %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
+                        quadr.arg1.scope.depth, quadr.arg1.scope.width);
+                fprintf(file, "\tmfc1 $%s, $f0\n", param_reg);
+            }
+
+            param_reg[1]++;
+            break;
+        }
+        case QUAD_TYPE_CALL:
+        {
+            fprintf(file, "\tjal %s\n", quadr.res.val);
+            param_reg[1] = '0';
+            break;
+        }
         case QUAD_TYPE_PARAM_FUNCTION:
         {
+            if (function_arg_index == -1)
+                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
+                              "\tsw $s0, 0($sp) # Save return address\n\n");
             fprintf(file, "\tsw $a%d, %s_%s_%d_%d\n", ++function_arg_index, quadr.arg1.val,
                     quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
             break;
@@ -405,12 +466,24 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             if (quadr.arg1.type == QUADR_ARG_INT)
                 fprintf(file, "\tli $v0, %s\n", quadr.arg1.val);
-            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR)
+            else if (quadr.arg1.type == QUADR_ARG_FLOAT)
+            {
+                float f = strtof(quadr.arg1.val, NULL);
+                fprintf(file, "\tli $t0, 0x%08X\n", *(unsigned int *)&f);
+                fprintf(file, "\tmtc1 $t0, $f0\n");
+                fprintf(file, "\tmfc1 $v0, $f0\n");
+            }
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR && quadr.arg1.val[0] == 't')
                 fprintf(file, "\tmove $v0, $%s\n", quadr.arg1.val);
+            else if (quadr.arg1.type == QUADR_ARG_TMP_VAR && quadr.arg1.val[0] == 'f')
+                fprintf(file, "\tmfc1 $v0, $%s\n", quadr.arg1.val);
             else
                 fprintf(file, "\tlw $v0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                         quadr.arg1.scope.depth, quadr.arg1.scope.width);
+            fprintf(file, "\n\tlw $s0, 0($sp) # Load previous value\n"
+                          "\taddi $sp,$sp,4 # Moving Stack pointer\n");
             fprintf(file, "\tjr $ra\n");
+            function_arg_index = -1;
             break;
         }
         case QUAD_TYPE_GOTO:

@@ -92,6 +92,35 @@ void free_scopes(char *id, void *scopes)
     vec_deinit(&v_scopes);
 }
 
+void free_func_args(char *id, void *func_args)
+{
+    vec_data_type_t *vec_data_type = (vec_data_type_t *)func_args;
+    vec_deinit(vec_data_type);
+}
+
+int get_function_total_args(char *id, hashmap_t *func_args)
+{
+    vec_data_type_t *vec_data_type = (vec_data_type_t *)hashmap_get(func_args, id);
+    if (vec_data_type == NULL)
+        return -1;
+    if (vec_data_type->length == 1)
+        if (vec_data_type->data[0] == 0)
+            return 0;
+    return vec_data_type->length;
+}
+
+enum data_type get_data_type_from_function(char *id, int index, hashmap_t *func_args)
+{
+    vec_data_type_t *vec_data_type = (vec_data_type_t *)hashmap_get(func_args, id);
+    if (vec_data_type == NULL)
+        return TYPE_NAD;
+    if (index >= vec_data_type->length)
+        return TYPE_NAD;
+    if (vec_data_type->data == NULL)
+        return TYPE_NAD;
+    return vec_data_type->data[index];
+}
+
 void add_symbol_to_scope(hashmap_t *symbol_table, int scope, char *key, enum symbol_type type,
                          enum data_type *data_type, char *yytext, int counter)
 {

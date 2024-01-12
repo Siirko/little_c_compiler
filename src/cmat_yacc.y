@@ -18,15 +18,18 @@
 
 
     void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, enum quad_ops op);
-    symbol_t *check_variable_declaration(char* token);
     
     extern char linebuf[1024];
     extern int counter;
 
     vec_quadr_t vec_quadr;
     hashmap_t *t_sym_tab;
+    hashmap_t *func_args;
     enum data_type data_type;
     char current_function[1024] = {0};
+    char current_function_call[1024] = {0};
+    int counter_func_args = 0;
+    int counter_func_args_waited = 0;
     bool is_for = false;
     bool is_while = false;
     bool in_if_condition = false;
@@ -46,6 +49,7 @@
         _Bool is_temperorary;
         _Bool is_null;
         _Bool is_variable;
+        _Bool is_function;
     } node_t;
 
     struct cond_node {
@@ -55,7 +59,10 @@
 }
 %{
     void yyerror(const char *msg);
-    void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn);    
+    void lyyerror(YYLTYPE t, char *s, ...);
+    void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn, YYLTYPE t1, YYLTYPE t3, YYLTYPE t);
+    symbol_t *check_variable_declaration(YYLTYPE t, char* token);
+    bool check_function_declaration(YYLTYPE t, char* token);
 %}
 
 %token <node_t> PRINT PRINTF 
@@ -67,11 +74,14 @@
 %type <node_t> iterator iterator_init 
 %type <node_t> printf_statement print_statement
 %type <node_t> program body scope return
-%type <node_t> function function_args function_arg
+%type <node_t> function function_call function_call_args function_call_arg function_args function_arg function_body
 %type <node_t> datatype expression init inits value
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
 %type <cond_node_t> condition 
+%{
+// there is a problem when we want to do operation like 1 + 2 + 2 * 3
+%}
 %left ADD SUBTRACT 
 %left MULTIPLY DIVIDE
 %locations
@@ -87,16 +97,22 @@ function: datatype ID {
         sprintf(current_function, "%s", $2.name);
         
         _Bool is_main = strcmp(current_function, "main") == 0;
-        static int main_counter = 0;
-        if(is_main && main_counter++ > 0)
-            yyerror("Main function already declared");
+        if(hashmap_get(func_args, current_function) != NULL)
+            lyyerror(@2, "Function already declared");
+        // static int main_counter = 0;
+        // if(is_main && main_counter++ > 0)
+        //     yyerror("Main function already declared");
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, current_function, QUADR_ARG_LABEL, TYPE_STR);
         quadr_gencode(is_main ? QUAD_TYPE_LABEL : QUAD_TYPE_LABEL_FUNCTION, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, 
                         res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         depth_scope = 0;
-    } '(' function_args ')' '{' body return '}'
+    } '(' function_args ')' '{' function_body '}'
+    ;
+
+function_body:  body return 
+    | return
     ;
 
 function_args: function_arg
@@ -108,8 +124,22 @@ function_arg: datatype ID {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $2.name, QUADR_ARG_STR, data_type);
         quadr_gencode(QUAD_TYPE_PARAM_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+
+        vec_data_type_t *v_data_type = (vec_data_type_t *)hashmap_get(func_args, current_function);
+        if(v_data_type == NULL)
+        {
+            vec_data_type_t v_data_type_tmp = {0};
+            vec_push(&v_data_type_tmp, data_type);
+            hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
+        }
+        else
+            vec_push(v_data_type, data_type);
     }
-    | %empty
+    | %empty {
+        vec_data_type_t v_data_type_tmp = {0};
+        vec_push(&v_data_type_tmp, data_type);
+        hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
+    }
     ;
    
 
@@ -219,7 +249,7 @@ else: ELSE scope {
 
 
 iterator: ID { 
-        check_variable_declaration($1.name);
+        check_variable_declaration(@1, $1.name);
     } UNARY {
         char tmp[1024] = {0};
         sprintf(tmp, "t%d", temp_var);
@@ -270,7 +300,7 @@ statement: datatype ID {
     } inits {
         if($4.is_null)
         {
-            symbol_t *symbol = check_variable_declaration($2.name);
+            symbol_t *symbol = check_variable_declaration(@2, $2.name);
             data_type = symbol->data_type;
             quadr_arg_t arg1 = {0};
             if(data_type == TYPE_INT)
@@ -285,13 +315,15 @@ statement: datatype ID {
         }
     }
     | ID { 
-        symbol_t *symbol = check_variable_declaration($1.name);
+        symbol_t *symbol = check_variable_declaration(@1, $1.name);
         if(symbol != NULL)
             data_type = symbol->data_type;
     } '=' expression {
         quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-
+        if(!$4.is_function)
+            quadr_init_arg(&arg1, $4.name, $4.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
+        else
+            quadr_init_arg(&arg1, "v0", QUADR_ARG_RETURN_FUNCTION, data_type);
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
 
@@ -312,9 +344,9 @@ inits: init
 init: '=' expression {
         quadr_arg_t arg1 = {0};
         enum data_type data_type_tmp;
-        if($2.is_variable)
+        if($2.is_variable && !$2.is_temperorary && !$2.is_function)
         {
-            symbol_t *symbol = check_variable_declaration($2.name);
+            symbol_t *symbol = check_variable_declaration(@2, $2.name);
             data_type_tmp = symbol!= NULL ? symbol->data_type : data_type;
         }
         else
@@ -385,7 +417,7 @@ printf_statement: PRINTF {
     ;
 
 print_statement: PRINT '(' ID { 
-        symbol_t *symbol = check_variable_declaration($3.name);
+        symbol_t *symbol = check_variable_declaration(@3, $3.name);
         if(symbol != NULL)
             data_type = symbol->data_type;
     } ')' ';' 
@@ -407,7 +439,7 @@ print_statement: PRINT '(' ID {
             }
             default:
             {
-                yyerror("Invalid type");
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "int or float");
                 break;
             }
         }
@@ -437,13 +469,13 @@ condition: value LT value {
 
 
 expression: expression ADD expression {
-        init_arg_expression(QUAD_OP_ADD, &$1, &$3, &$$);
+        init_arg_expression(QUAD_OP_ADD, &$1, &$3, &$$, @1, @3, @$);
     }
     | expression SUBTRACT expression {
-        init_arg_expression(QUAD_OP_SUB, &$1, &$3, &$$);
+        init_arg_expression(QUAD_OP_SUB, &$1, &$3, &$$, @1, @3, @$);
     }
     | expression MULTIPLY expression {
-        init_arg_expression(QUAD_OP_MUL, &$1, &$3, &$$);
+        init_arg_expression(QUAD_OP_MUL, &$1, &$3, &$$, @1, @3, @$);
     }
     | expression DIVIDE expression {
         if(!$3.is_variable && $3.name[0] == '0')
@@ -453,11 +485,91 @@ expression: expression ADD expression {
             // need to check the data of the variable
         }
         else
-            init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$);
+            init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$, @1, @3, @$);
     }
     | value
+    | function_call
     ;
 
+function_call: ID { 
+        $1.is_function = check_function_declaration(@1, $1.name);
+        if($1.is_function)
+            sprintf(current_function_call, "%s", $1.name);
+        counter_func_args_waited = get_function_total_args(current_function_call, func_args);
+        if(counter_func_args_waited == 0)
+            lyyerror(@1, "Function doesn't have any arguments");
+        else if(counter_func_args_waited < 0)
+            lyyerror(@1, "Function not declared");
+    } '(' function_call_args ')' {
+        if(counter_func_args < counter_func_args_waited)
+            lyyerror(@4, "Not enough arguments");
+        quadr_arg_t res = {0};
+        quadr_init_arg(&res, $1.name, QUADR_ARG_STR, TYPE_STR);
+        quadr_gencode(QUAD_TYPE_CALL, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        counter_func_args = 0;
+    }
+    ;
+
+function_call_args: function_call_arg
+    | function_call_args ',' function_call_arg
+    ;
+
+function_call_arg: expression {
+        if($1.is_variable && !$1.is_temperorary && !$1.is_function)
+        {
+            symbol_t *symbol = check_variable_declaration(@1, $1.name);
+            if(symbol != NULL)
+            {
+                enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+                if(symbol->data_type != data_type_tmp && data_type_tmp != TYPE_NAD)
+                    lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", data_type_tmp == TYPE_INT ? "int" : "float");
+                if(counter_func_args > counter_func_args_waited)
+                    lyyerror(@1, "Too many arguments");
+                else if(counter_func_args < counter_func_args_waited)
+                    counter_func_args++;
+            }
+        }
+        else if($1.is_temperorary)
+        {
+            enum data_type data_type_chk = $1.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_chk != data_type_tmp && data_type_tmp != TYPE_NAD)
+                lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", data_type_tmp == TYPE_INT ? "int" : "float");
+            if(counter_func_args > counter_func_args_waited)
+                lyyerror(@1, "Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
+        else if(is_str_float($1.name))
+        {
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_tmp != TYPE_FLOAT && data_type_tmp != TYPE_NAD)
+                lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", "int");
+            if(counter_func_args > counter_func_args_waited)
+                lyyerror(@1, "Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
+        else 
+        {
+            enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
+            if(data_type_tmp != TYPE_INT && data_type_tmp != TYPE_NAD)
+                lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", "float");
+            if(counter_func_args >= counter_func_args_waited)
+                lyyerror(@1, "Too many arguments");
+            else if(counter_func_args < counter_func_args_waited)
+                counter_func_args++;
+        }
+        quadr_arg_t arg1 = {0};
+        quadr_init_arg(&arg1, $1.name, $1.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
+        quadr_gencode(QUAD_TYPE_PARAM_CALL, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0}, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        if($1.is_temperorary)
+        {
+            temp_var = 0;
+            $1.is_temperorary = false;
+        }
+    }
+    ;
 
 
 
@@ -465,7 +577,7 @@ expression: expression ADD expression {
 value: NUMBER { $$.is_variable = false; }
     | FLOAT_NUM { $$.is_variable = false; }
     | ID { 
-        check_variable_declaration($1.name);
+        check_variable_declaration(@1, $1.name);
         $$.is_variable = true;
      }
     ;
@@ -476,7 +588,26 @@ return: RETURN {
         quadr_arg_t arg1 = {0};
 
         quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-
+        symbol_t *symbol = check_variable_declaration(@3, current_function);
+        if($3.is_temperorary && $3.is_variable && symbol != NULL)
+        {
+            enum data_type data_type_tmp = $3.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
+            if(symbol->data_type != data_type_tmp)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+        }
+        else if(!$3.is_temperorary && $3.is_variable && symbol != NULL)
+        {
+            if(symbol->data_type != data_type)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+        }
+        else if(symbol != NULL)
+        {
+            bool is_float = is_str_float($3.name);
+            if(is_float && symbol->data_type != TYPE_FLOAT)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "int");
+            else if(!is_float && symbol->data_type != TYPE_INT)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "float");
+        }
         _Bool is_main = strcmp(current_function, "main") == 0;
         quadr_gencode(is_main ? QUAD_TYPE_RETURN_MAIN : QUAD_TYPE_RETURN_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  
                         &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -531,7 +662,7 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
     }
 }
 
-void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn)
+void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn, YYLTYPE t1, YYLTYPE t3, YYLTYPE t)
 {
     char var = data_type == TYPE_INT ? 't' : 'f';
     sprintf(nn->name, "%c%d", var, ++temp_var);
@@ -546,7 +677,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     }
     else if(n1->is_variable)
     {
-        symbol_t *symbol = check_variable_declaration(n1->name);
+        symbol_t *symbol = check_variable_declaration(t1, n1->name);
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
@@ -569,7 +700,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     }
     else if(n3->is_variable)
     {
-        symbol_t *symbol = check_variable_declaration(n3->name);
+        symbol_t *symbol = check_variable_declaration(t3, n3->name);
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
@@ -592,7 +723,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     }
     else if(nn->is_variable)
     {
-        symbol_t *symbol = check_variable_declaration(nn->name);
+        symbol_t *symbol = check_variable_declaration(t, nn->name);
         data_type_tmp = symbol != NULL ? symbol->data_type : data_type;
     }
     else
@@ -609,7 +740,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     temp_var = 0;
 }
 
-symbol_t *check_variable_declaration(char* token) {
+symbol_t *check_variable_declaration(YYLTYPE t, char* token) {
     vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, current_function);
     int current_size_scope = v_scopes->data[depth_scope].length - 1;
     if (current_size_scope < 0)
@@ -628,15 +759,22 @@ symbol_t *check_variable_declaration(char* token) {
                 break;
         }
     }
-    yyerror("Variable not declared");
+    lyyerror(t, "Variable not declared");
     return NULL;
 }
 
+bool check_function_declaration(YYLTYPE t, char* token) {
+    vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, current_function);
+    if(v_scopes != NULL)
+        return true;
+    lyyerror(t, "Function not declared");
+    return false;
+}
+
 void yyerror(const char* msg) {
-    fprintf(stderr, ANSI_COLOR_CYAN "ERROR: %s: " ANSI_RESET
-                         ANSI_BOLD  "'%s' " ANSI_RESET
-                     ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, yytext, yylineno);
-    
+    fprintf(stderr, ANSI_COLOR_CYAN "ERROR: %s " ANSI_RESET
+                         /*ANSI_BOLD  "'%s' " ANSI_RESET*/
+                     ANSI_UNDERLINE "in line %d\n" ANSI_RESET, msg, /*yytext,*/ yylineno);
     if(yylloc.first_line)
     {
         /* fprintf(stderr, "%d.%d-%d.%d: error\n", yylloc.first_line, yylloc.first_column,
@@ -653,4 +791,30 @@ void yyerror(const char* msg) {
         fprintf(stderr, "\n");
     }
     error_count++;
+}
+
+void lyyerror(YYLTYPE t, char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    fprintf(stderr, ANSI_COLOR_CYAN "ERROR: ");
+    vfprintf(stderr, msg, ap); 
+    fprintf(stderr, ANSI_RESET
+                         /*ANSI_BOLD  "'%s' " ANSI_RESET*/
+                     " " ANSI_UNDERLINE "in line %d\n" ANSI_RESET, /*yytext,*/ yylineno);
+    va_end(ap);
+    if(t.first_line)
+    {
+        fprintf(stderr, "%s\n", linebuf);
+        int len = t.last_column - t.first_column;
+        for(int i = 0; i < t.first_column-1; ++i)
+            fprintf(stderr, " ");
+        for(int i = 0; i < len; ++i)
+            if(i == 0)
+                fprintf(stderr, "^");
+            else
+                fprintf(stderr, "~");
+    }
+    error_count++;
+    fprintf(stderr, "\n");
 }
