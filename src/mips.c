@@ -208,9 +208,6 @@ void mips_operation_gen(quadr_t *quadr, FILE *file, char *tmp_reg_int, char *tmp
 
     if (op_type == OP_TYPE_FLOAT)
         fprintf(file, "\tmov.s $f0, $%s\n", quadr->res.val);
-    else
-        fprintf(file, "\tmove $t0, $%s\n", quadr->res.val);
-    // }
 }
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
@@ -354,8 +351,12 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
     }
     else
     {
-        tmp_reg_int[1]++;
-        tmp_reg_float[1]++;
+        // this code is a real mess hihi im loosing my mind
+        if (tmp_reg_int[1] != '1')
+        {
+            tmp_reg_int[1]++;
+            tmp_reg_float[1]++;
+        }
         fprintf(file, "\tlw $%s, %s_%s_%d_%d\n", tmp_reg_int, quadr.arg2.val, quadr.arg2.scope.function_name,
                 quadr.arg2.scope.depth, quadr.arg2.scope.width);
         fprintf(file, "\tmtc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_int[1]);

@@ -111,8 +111,7 @@ function: datatype ID {
     } '(' function_args ')' '{' function_body '}'
     ;
 
-function_body:  body return 
-    | return
+function_body: body 
     ;
 
 function_args: function_arg
@@ -160,6 +159,7 @@ body_element: for_statement
     | statement ';'
     | printf_statement
     | print_statement
+    | return
     ;
 
 scope: '{' { 
@@ -180,6 +180,8 @@ scope: '{' {
 
 while_statement: WHILE { 
         is_while = true;
+        is_for = false;
+        printf("while statement\n");
     } '(' condition ')' scope {
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO, TYPE_STR);
@@ -204,6 +206,7 @@ for_statement: FOR {
 
 if_statement: IF { 
         is_for = false;
+        is_while = false;
         in_if_condition = true;
         ++if_counter;
     } '(' condition ')' {
@@ -264,8 +267,11 @@ iterator: ID {
         quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
         quadr_arg_t _res = {0};
         quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
-
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, QUAD_OP_ADD, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        
+        bool is_add = strcmp($3.name, "++") == 0;
+        printf("%s\n", $3.name);
+        enum quad_ops op = is_add ? QUAD_OP_ADD : QUAD_OP_SUB;
+        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         temp_var = 0;
     }
@@ -337,6 +343,7 @@ statement: datatype ID {
         if($1.is_temperorary)
             $1.is_temperorary = false;
     }
+    | iterator
     ;
 
 inits: init
@@ -721,11 +728,11 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         
         if(op_exp == QUAD_OP_SUB)
         {
-            // shift right of offset value of the n3->name
+            /* // shift right of offset value of the n3->name
             size_t len = strlen(n3->name)+1;
             if(len < 1024)
                 memmove(n3->name+1, n3->name, len);
-            n3->name[0] = '-';
+            n3->name[0] = '-'; */
         }
     }
     quadr_arg_t arg2 = {0};

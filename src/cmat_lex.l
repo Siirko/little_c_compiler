@@ -21,6 +21,7 @@
 %option noinput
 
 alpha [a-zA-Z]
+alphawith_ [a-zA-Z_]
 digit [0-9]
 unary "++"|"--"
 
@@ -39,7 +40,7 @@ unary "++"|"--"
 
 [-]?{digit}+                { strncpy(yylval.node_t.name, yytext, 1024); return NUMBER; }
 [-]?{digit}+\.{digit}{1,6}  { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT_NUM; }
-{alpha}({alpha}|{digit})*   { strncpy(yylval.node_t.name, yytext, 1024); return ID; }
+{alpha}({alphawith_}|{digit})*   { strncpy(yylval.node_t.name, yytext, 1024); return ID; }
 {unary}                     { strncpy(yylval.node_t.name, yytext, 1024); return UNARY; }
 
 "<="                        { strncpy(yylval.node_t.name, yytext, 1024); return LE; }
