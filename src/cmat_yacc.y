@@ -487,6 +487,9 @@ expression: expression ADD expression {
         else
             init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$, @1, @3, @$);
     }
+    | '(' expression ')' {
+        $$ = $2;
+    }
     | value
     | function_call
     ;
@@ -747,7 +750,6 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg2, arg1, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     else
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
-    temp_var = 0;
 }
 
 symbol_t *check_variable_declaration(YYLTYPE t, char* token) {
