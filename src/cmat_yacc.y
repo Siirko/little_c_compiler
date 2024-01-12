@@ -710,6 +710,15 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
             data_type_tmp = TYPE_FLOAT;
         else
             data_type_tmp = data_type;
+        
+        if(op_exp == QUAD_OP_SUB)
+        {
+            // shift right of offset value of the n3->name
+            size_t len = strlen(n3->name)+1;
+            if(len < 1024)
+                memmove(n3->name+1, n3->name, len);
+            n3->name[0] = '-';
+        }
     }
     quadr_arg_t arg2 = {0};
     quadr_init_arg(&arg2, n3->name, n3->is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
