@@ -228,6 +228,21 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
             fprintf(file, "\tmove $%s, $%s\n", quadr.arg1.val, tmp_reg_int);
         else if (quadr.arg1.data_type == TYPE_FLOAT)
             fprintf(file, "\tmov.s $%s, $%s\n", quadr.arg1.val, tmp_reg_float);
+        // if we have t1 = t1 op t1
+        // or f1 = f1 op f1
+        // call directely the operation
+        bool res_arg1 = strcmp(quadr.res.val, quadr.arg1.val) == 0;
+        bool res_arg2 = strcmp(quadr.res.val, quadr.arg2.val) == 0;
+        bool arg1_arg2 = strcmp(quadr.arg1.val, quadr.arg2.val) == 0;
+        if (res_arg1 && res_arg2 && arg1_arg2)
+        {
+            quadr.arg1.val = strdup(tmp_reg_int);
+
+            mips_operation_gen(&quadr, file, tmp_reg_int, tmp_reg_float, quadr.op,
+                               op_type_int[quadr.res.data_type]);
+            free(quadr.arg1.val);
+            return;
+        }
         quadr.arg1.val = strdup(tmp_reg_int);
     }
     else if (arg1_int)
@@ -326,8 +341,8 @@ void mips_binary_assign(quadr_t quadr, FILE *file)
         fprintf(file, "\tmtc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_float[1]);
         if (quadr.res.data_type == TYPE_INT)
         {
-            fprintf(file, "\tcvt.w.s $f%c, $f%c\n", tmp_reg_int[1], tmp_reg_int[1]);
-            fprintf(file, "\tmfc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_int[1]);
+            fprintf(file, "\tcvt.w.s $f%c, $f%c\n", tmp_reg_float[1], tmp_reg_float[1]);
+            fprintf(file, "\tmfc1 $%s, $f%c\n", tmp_reg_int, tmp_reg_float[1]);
         }
     }
     else

@@ -1,6 +1,6 @@
 
-int add(int a, int b, int c) { return 23; }
-float addf(float a, float b, float c) { return a + 1.2; }
+int add(int a, int b, int c) { return a + b + c * 2.02; }
+float addf(float a, float b, float c) { return a + b + c * 1.01; }
 int main()
 {
     int a;

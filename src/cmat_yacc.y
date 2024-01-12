@@ -79,6 +79,9 @@
 %type <node_t> statement body_element for_statement while_statement if_statement else
 
 %type <cond_node_t> condition 
+%{
+// there is a problem when we want to do operation like 1 + 2 + 2 * 3
+%}
 %left ADD SUBTRACT 
 %left MULTIPLY DIVIDE
 %locations
