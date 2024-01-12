@@ -9,7 +9,7 @@
 int main()
 {
     int a = 0;
-    int e = -2;
+    int e = 2;
     float b = 2.3;
     float emp;
 
