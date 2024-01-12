@@ -7,5 +7,4 @@ int main()
     print(b);
     printf("\n");
     return 0;
-    return 0;
 }
