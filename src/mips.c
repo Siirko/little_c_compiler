@@ -462,9 +462,6 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         }
         case QUAD_TYPE_PARAM_FUNCTION:
         {
-            if (function_arg_index == -1)
-                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
-                              "\tsw $s0, 0($sp) # Save return address\n\n");
             fprintf(file, "\tsw $a%d, %s_%s_%d_%d\n", ++function_arg_index, quadr.arg1.val,
                     quadr.arg1.scope.function_name, quadr.arg1.scope.depth, quadr.arg1.scope.width);
             break;
@@ -501,6 +498,9 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         case QUAD_TYPE_LABEL_FUNCTION:
         {
             fprintf(file, "%s:\n", quadr.res.val);
+            if (function_arg_index == -1)
+                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
+                              "\tsw $s0, 0($sp) # Save return address\n\n");
             break;
         }
         case QUAD_TYPE_LABEL:

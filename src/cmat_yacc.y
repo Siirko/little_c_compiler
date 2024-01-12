@@ -137,7 +137,7 @@ function_arg: datatype ID {
     }
     | %empty {
         vec_data_type_t v_data_type_tmp = {0};
-        vec_push(&v_data_type_tmp, data_type);
+        vec_push(&v_data_type_tmp, -1);
         hashmap_insert(func_args, current_function, &v_data_type_tmp, sizeof(vec_data_type_t));
     }
     ;
@@ -179,10 +179,8 @@ scope: '{' {
     ;
 
 while_statement: WHILE { 
-        is_while = true; 
-    } '(' condition ')' {
-       
-    } scope {
+        is_while = true;
+    } '(' condition ')' scope {
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -275,11 +273,14 @@ iterator: ID {
 iterator_init: datatype ID {
         ++depth_scope;
         vec_vec_hashmap_t *v_scopes = (vec_vec_hashmap_t *)hashmap_get(t_sym_tab, current_function);
-        if (v_scopes->length - 1 < depth_scope)
-            vec_push(v_scopes, (vec_hashmap_t){0});
-        // missing a condition here
-        vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
-        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
+        if(v_scopes !=  NULL)
+        {
+            if (v_scopes->length - 1 < depth_scope)
+                vec_push(v_scopes, (vec_hashmap_t){0});
+            // missing a condition here
+            vec_push(&v_scopes->data[depth_scope], hashmap_init(10));
+            add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_ITERATOR, &data_type, yytext, counter); 
+        }
     } '=' value {
         quadr_arg_t arg1 = {0};
         quadr_init_arg(&arg1, $5.name, $5.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
@@ -357,7 +358,6 @@ init: '=' expression {
             else
                 data_type_tmp = TYPE_INT;
         }
-        printf("%s %d %s %d\n",$$.name, data_type, $2.name, data_type_tmp);
         quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
         quadr_arg_t res = {0};
@@ -501,9 +501,9 @@ function_call: ID {
         if($1.is_function)
             sprintf(current_function_call, "%s", $1.name);
         counter_func_args_waited = get_function_total_args(current_function_call, func_args);
-        if(counter_func_args_waited == 0)
-            lyyerror(@1, "Function doesn't have any arguments");
-        else if(counter_func_args_waited < 0)
+        // if(counter_func_args_waited == 0)
+        //     lyyerror(@1, "Function doesn't have any arguments");
+        if(counter_func_args_waited < 0)
             lyyerror(@1, "Function not declared");
     } '(' function_call_args ')' {
         if(counter_func_args < counter_func_args_waited)
@@ -520,7 +520,9 @@ function_call_args: function_call_arg
     ;
 
 function_call_arg: expression {
-        if($1.is_variable && !$1.is_temperorary && !$1.is_function)
+        if(counter_func_args_waited == 0)
+            lyyerror(@1, "Function doesn't have any arguments");
+        else if($1.is_variable && !$1.is_temperorary && !$1.is_function)
         {
             symbol_t *symbol = check_variable_declaration(@1, $1.name);
             if(symbol != NULL)
@@ -574,6 +576,7 @@ function_call_arg: expression {
             $1.is_temperorary = false;
         }
     }
+    | %empty
     ;
 
 
@@ -752,6 +755,7 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg2, arg1, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
     else
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op_exp, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    temp_var = 0;
 }
 
 symbol_t *check_variable_declaration(YYLTYPE t, char* token) {
