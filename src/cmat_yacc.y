@@ -588,24 +588,25 @@ return: RETURN {
         quadr_arg_t arg1 = {0};
 
         quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-        symbol_t *symbol = check_variable_declaration(@3, current_function);
-        if($3.is_temperorary && $3.is_variable && symbol != NULL)
+        symbol_t *func_sym = check_variable_declaration(@3, current_function);
+        if($3.is_temperorary && $3.is_variable && func_sym != NULL)
         {
             enum data_type data_type_tmp = $3.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
-            if(symbol->data_type != data_type_tmp)
-                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+            if(func_sym->data_type != data_type_tmp)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", func_sym->data_type == TYPE_INT ? "int" : "float");
         }
-        else if(!$3.is_temperorary && $3.is_variable && symbol != NULL)
+        else if(!$3.is_temperorary && $3.is_variable && func_sym != NULL)
         {
-            if(symbol->data_type != data_type)
-                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+            symbol_t *var_sym = check_variable_declaration(@3, $3.name);
+            if(var_sym != NULL && func_sym->data_type != var_sym->data_type)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", func_sym->data_type == TYPE_INT ? "int" : "float");
         }
-        else if(symbol != NULL)
+        else if(func_sym != NULL)
         {
             bool is_float = is_str_float($3.name);
-            if(is_float && symbol->data_type != TYPE_FLOAT)
+            if(is_float && func_sym->data_type != TYPE_FLOAT)
                 lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "int");
-            else if(!is_float && symbol->data_type != TYPE_INT)
+            else if(!is_float && func_sym->data_type != TYPE_INT)
                 lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "float");
         }
         _Bool is_main = strcmp(current_function, "main") == 0;
