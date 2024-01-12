@@ -111,7 +111,8 @@ function: datatype ID {
     } '(' function_args ')' '{' function_body '}'
     ;
 
-function_body: body 
+function_body: body return
+    | return
     ;
 
 function_args: function_arg
@@ -159,7 +160,7 @@ body_element: for_statement
     | statement ';'
     | printf_statement
     | print_statement
-    | return
+    /* | return */
     ;
 
 scope: '{' { 

@@ -208,6 +208,8 @@ void mips_operation_gen(quadr_t *quadr, FILE *file, char *tmp_reg_int, char *tmp
 
     if (op_type == OP_TYPE_FLOAT)
         fprintf(file, "\tmov.s $f0, $%s\n", quadr->res.val);
+    else
+        fprintf(file, "\tmove $t0, $%s\n", quadr->res.val);
 }
 
 void mips_binary_assign(quadr_t quadr, FILE *file)
