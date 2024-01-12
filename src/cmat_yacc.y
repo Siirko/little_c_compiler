@@ -270,7 +270,6 @@ iterator: ID {
         quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
         
         bool is_add = strcmp($3.name, "++") == 0;
-        printf("%s\n", $3.name);
         enum quad_ops op = is_add ? QUAD_OP_ADD : QUAD_OP_SUB;
         quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
