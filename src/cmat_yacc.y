@@ -94,9 +94,11 @@ function: datatype ID {
         sprintf(current_function, "%s", $2.name);
         
         _Bool is_main = strcmp(current_function, "main") == 0;
-        static int main_counter = 0;
-        if(is_main && main_counter++ > 0)
-            yyerror("Main function already declared");
+        if(hashmap_get(func_args, current_function) != NULL)
+            lyyerror(@2, "Function already declared");
+        // static int main_counter = 0;
+        // if(is_main && main_counter++ > 0)
+        //     yyerror("Main function already declared");
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, current_function, QUADR_ARG_LABEL, TYPE_STR);
@@ -510,13 +512,13 @@ function_call_args: function_call_arg
     ;
 
 function_call_arg: expression {
-        if($1.is_variable)
+        if($1.is_variable && !$1.is_temperorary && !$1.is_function)
         {
             symbol_t *symbol = check_variable_declaration(@1, $1.name);
             if(symbol != NULL)
             {
                 enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
-                if(symbol->data_type != data_type_tmp)
+                if(symbol->data_type != data_type_tmp && data_type_tmp != TYPE_NAD)
                     lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", data_type_tmp == TYPE_INT ? "int" : "float");
                 if(counter_func_args > counter_func_args_waited)
                     lyyerror(@1, "Too many arguments");
@@ -528,7 +530,7 @@ function_call_arg: expression {
         {
             enum data_type data_type_chk = $1.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
             enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
-            if(data_type_chk != data_type_tmp)
+            if(data_type_chk != data_type_tmp && data_type_tmp != TYPE_NAD)
                 lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", data_type_tmp == TYPE_INT ? "int" : "float");
             if(counter_func_args > counter_func_args_waited)
                 lyyerror(@1, "Too many arguments");
@@ -538,7 +540,7 @@ function_call_arg: expression {
         else if(is_str_float($1.name))
         {
             enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
-            if(data_type_tmp != TYPE_FLOAT)
+            if(data_type_tmp != TYPE_FLOAT && data_type_tmp != TYPE_NAD)
                 lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", "int");
             if(counter_func_args > counter_func_args_waited)
                 lyyerror(@1, "Too many arguments");
@@ -548,7 +550,7 @@ function_call_arg: expression {
         else 
         {
             enum data_type data_type_tmp = get_data_type_from_function(current_function_call, counter_func_args, func_args);
-            if(data_type_tmp != TYPE_INT)
+            if(data_type_tmp != TYPE_INT && data_type_tmp != TYPE_NAD)
                 lyyerror(@1, "Invalid type, expected " ANSI_BOLD "%s", "float");
             if(counter_func_args >= counter_func_args_waited)
                 lyyerror(@1, "Too many arguments");
@@ -583,7 +585,26 @@ return: RETURN {
         quadr_arg_t arg1 = {0};
 
         quadr_init_arg(&arg1, $3.name, $3.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
-
+        symbol_t *symbol = check_variable_declaration(@3, current_function);
+        if($3.is_temperorary && $3.is_variable && symbol != NULL)
+        {
+            enum data_type data_type_tmp = $3.name[0] == 'f' ? TYPE_FLOAT : TYPE_INT;
+            if(symbol->data_type != data_type_tmp)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+        }
+        else if(!$3.is_temperorary && $3.is_variable && symbol != NULL)
+        {
+            if(symbol->data_type != data_type)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", symbol->data_type == TYPE_INT ? "int" : "float");
+        }
+        else if(symbol != NULL)
+        {
+            bool is_float = is_str_float($3.name);
+            if(is_float && symbol->data_type != TYPE_FLOAT)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "int");
+            else if(!is_float && symbol->data_type != TYPE_INT)
+                lyyerror(@3, "Invalid type, expected " ANSI_BOLD "%s", "float");
+        }
         _Bool is_main = strcmp(current_function, "main") == 0;
         quadr_gencode(is_main ? QUAD_TYPE_RETURN_MAIN : QUAD_TYPE_RETURN_FUNCTION, 0, arg1, (quadr_arg_t){0}, (quadr_arg_t){0},  
                         &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -791,5 +812,6 @@ void lyyerror(YYLTYPE t, char *msg, ...)
             else
                 fprintf(stderr, "~");
     }
+    error_count++;
     fprintf(stderr, "\n");
 }
