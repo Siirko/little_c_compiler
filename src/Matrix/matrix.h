@@ -15,27 +15,26 @@ typedef struct matrix_t{
 	// M[n][m]
 }matrix_t;
 
-#define matrix_element(A,i,j) A->M[]
-
+#define matrix_element(A,i,j) A->M[i*A->m+j]
 
 // int *** functions return 0 if success, -1 if error
 
-void printmat(matrix_t *A);
+void printmat(float *A, int n, int m);
 
-void unit_matrix(matrix_t *A);
-void zero_matrix(matrix_t *A);
+/*
+void unit_matrix(float *A, int n, int m);
+void zero_matrix(float *A, int n, int m);
+*/
 
-int transpose_matrix(matrix_t *T,matrix_t *A);
+void transpose_matrix(float *T,float *A,int n,int m);
 
-int add_matrix(matrix_t *R,matrix_t *A, matrix_t *B,float a, float b);
+void add_matrix(float *R,float *A, float *B,int n, int m);
+void sub_matrix(float *R,float *A, float *B,int n, int m);
 
-#define sub_matrix(R,A,B,a,b) add_matrix(R,A,B,a,-b)
+void mult_matrix(float* R,float *A, float *B,int n,int m,int p);
+void div_matrix(float* R,float *A, float *B,int n,int m,int p);
 
-int mult_matrix(matrix_t *R,matrix_t *A, matrix_t *B,float a, float b);
-int div_matrix(matrix_t *R,matrix_t *A, matrix_t *B,float a, float b);
-
-void mult_scal_matrix(matrix_t *A, float scal);
-int div_scal_matrix(matrix_t *A, float scal);
-
+void mult_scal_matrix(float *A,int n,int m, float scal);
+void div_scal_matrix(float *A,int n,int m, float scal);
 
 #endif // MATRICE_H

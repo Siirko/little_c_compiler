@@ -1,15 +1,6 @@
 #include "matrix.h"
 
-
 /*
-typedef struct matrix_t{
-	float *M;
-	int n;
-	int m;
-	// M[n][m]
-}matrix_t;
-*/
-
 void printmat(matrix_t *A){
 	
 	for(int i=0;i<A->n;i++){
@@ -114,4 +105,126 @@ int div_scal_matrix(matrix_t *A, float scal){
 	}
 
 	return 0;
+}
+*/
+
+/*
+void unit_matrix(float *A, int n, int m){
+
+	for(int i=0;i<n;i++){
+		for(int j=0;j<m;j++){
+			A[i*m+j]= i==j ? 1 : 0;
+		}
+	}
+
+}
+
+void zero_matrix(float *A, int n, int m){
+	
+	for(int i=0;i<n;i++){
+		for(int j=0;j<m;j++)
+			A[i*m+j]= 0;
+	}
+
+}
+*/
+
+void printmat(float *A, int n, int m){
+	
+	for(int i=0;i<n;i++){
+		for(int j=0;j<m;j++)
+			printf("%f\t",A[i*m+j]);
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void transpose_matrix(float *T,float *A,int n,int m){
+
+	for(int i=0;i<n;i++){
+		for(int j=0;j<m;j++)
+			T[i*m+j] = A[j*m+i];
+	}
+
+}
+
+void add_matrix(float *R,float *A, float *B,int n, int m){
+
+	for(int i=0; i<n ; i++){
+		for(int j=0; j<m; j++)
+			R[i*m+j] = A[i*m+j] + B[i*m+j];
+	}
+
+}
+
+void sub_matrix(float *R,float *A, float *B,int n, int m){
+
+	for(int i=0; i<n ; i++){
+		for(int j=0; j<m; j++)
+			R[i*m+j] = A[i*m+j] - B[i*m+j];
+	}
+
+}
+
+
+void mult_matrix(float* R,float *A, float *B,int n,int m,int p){
+	float s;
+	for(int i=0;i<n;i++){
+		for(int j=0;j<p;j++){
+			s = 0;
+			for(int k=0;k<m;k++)
+				s+= A[i*m+k]*B[k*p+j];
+			R[i*m+j]= s;
+		}
+	}
+}
+
+void div_matrix(float* R,float *A, float *B,int n,int m,int p){
+	float s;
+	for(int i=0;i<n;i++){
+		for(int j=0;j<p;j++){
+			s = 0;
+			for(int k=0;k<m;k++)
+				s+= B[k*p+j] !=0 ?  A[i*m+k]/B[k*p+j] : 0;
+			R[i*m+j]= s;
+		}
+	}
+
+}
+
+void mult_scal_matrix(float *A,int n,int m, float scal){
+	for (int i = 0; i < n; i++){
+		for(int j = 0; j<n ;j++){
+			A[i*m+j]*=scal;
+		}
+	}
+	
+}
+
+void div_scal_matrix(float *A,int n,int m, float scal){
+	if(scal==0) return;
+	for (int i = 0; i < n; i++){
+		for(int j = 0; j<n ;j++){
+			A[i*m+j]/=scal;
+		}
+	}
+}
+
+
+int main(void){	
+
+	int n = 3;
+	int m = 3;
+
+	float A[3][3] = {{1,2,3},{4,5,6},{7,8,9}};
+	float B[3][3] = {{1,2,3},{4,5,6},{7,8,9}};
+	float R[3][3];
+
+
+	add_matrix((float*)R,(float*)A,(float*)B,3,3);
+	printmat((float*)A,3,3);
+	printmat((float*)B,3,3);
+	printmat((float*)R,3,3);
+	
+
 }

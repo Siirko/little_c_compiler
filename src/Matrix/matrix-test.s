@@ -172,6 +172,31 @@ sw $t3, 12($sp)          # Sauvegarde de $t3 à l'adresse actuelle + 12 octets
 jal scal_div_matrix
 
 .end_macro
+	
+	
+.data
+
+# Matrice M de taille 3x3 initialisée à 0
+.align 2
+M1: .float 1.0:9
+# Entiers n et m
+M1_n: .word 3
+M1_m: .word 3
+.align 2
+M2: .float 1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0 #2.0:9
+M2_n: .word 3
+M2_m: .word 3
+.align 2
+M3: .float 10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0#3.0:9
+M3_n: .word 3
+M3_m: .word 3
+.align 2
+I3: .float 1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0#3.0:9
+I3_n: .word 3
+I3_m: .word 3
+
+# Chaîne de caractères pour le retour à la ligne
+breakline: .asciiz "\n"
 
 .text
 
@@ -553,3 +578,122 @@ scal_div_matrix:
 	for_scal_div_matrix1_end:
 	
 	jr    $ra
+	
+.data
+	.align 2
+	test_add_matrix_M1: .float 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+	.align 2
+	test_add_matrix_M2: .float 10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0
+	.align 2
+	test_add_matrix_M3: .float 100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0
+	.align 2
+	test_add_matrix_n: .word 3
+	.align 2
+	test_add_matrix_m: .word 3
+	.align 2
+	lambda: .float 4.5
+	
+.align 2	
+A:  .float 6.0, 5.0, 4.0, 1.0, 2.0, 3.0
+.align 2
+At : .float 6.0, 1.0,5.0, 2.0, 4.0, 3.0
+.align 2
+B:  .float 1.0, 2.0, 3.0, 4.0, 5.0, 6.0
+.align 2
+T:  .float 0.0:6  # Espace pour la matrice résultante (2x3)
+.align 2
+P: .float 0.0:9
+.align 2
+A_n: .word 2
+A_m: .word 3
+
+.text
+test_matrix:
+	# genere 3 matrices de taille 3x3 en assembleur mips
+	
+	
+	# print_mat (M1,test_add_matrix_n,test_add_matrix_m)
+	# print_mat (M2,test_add_matrix_n,test_add_matrix_m)
+	# print_mat (M3,test_add_matrix_n,test_add_matrix_m)
+	
+	# test la fonction add_matrix
+	#la $t0, M1
+	#la $t1, M2
+	#la $t2, M3
+	#lw $t3, M1_n
+	#lw $t4, M1_m
+
+	#subi $sp, $sp, 20        # Allouer de l'espace pour 3 mots (12 octets) sur la pile
+	#sw $t0, 0($sp)           # Sauvegarde de $t0 à l'adresse actuelle du pointeur de pile
+	#sw $t1, 4($sp)           # Sauvegarde de $t1 à l'adresse actuelle + 4 octets
+	#sw $t2, 8($sp)           # Sauvegarde de $t2 à l'adresse actuelle + 8 octets
+	#sw $t3, 12($sp)          # Sauvegarde de $t3 à l'adresse actuelle + 12 octets
+	#sw $t4, 16($sp)          # Sauvegarde de $t4 à l'adresse actuelle + 16 octets
+
+	#jal add_matrix
+		
+	print_str("\n Matrice M2 : \n")
+	print_mat(M2,M2_n,M2_m)
+	print_str("\n Matrice M3 : \n")
+	print_mat(M3,M3_n,M3_m)	
+		
+	print_str("\n Addition M2 + M3 \n")
+	add_mat(M1,M2,M3,M2_n,M2_m)
+	print_mat(M1,M1_n,M1_m)
+		
+	
+	print_str("\n Multiplication M2*M3 \n")
+	mult_mat(M1,M2,M3,M2_n,M3_n,M3_m)
+	print_mat(M1,M1_n,M1_m)
+	
+	print_str("\n Transposition M2 \n")
+	transpose_mat(M1,M2,M2_n,M2_m)
+	print_mat(M1,M1_n,M1_m)
+	print_str("\n M2 \n")
+	print_mat(M2,M2_n,M2_m)
+	
+	print_str("Matrice identité I3\n")
+	print_mat(I3,I3_n,I3_m)
+	
+	print_str("\n Multiplication par un scalaire \n")
+	scal_mult_mat(lambda,I3,I3_n,I3_m)
+	print_mat(I3,I3_n,I3_m)
+	
+	print_str("\n Division par un scalaire \n")
+	scal_mult_mat(lambda,I3,I3_n,I3_m)
+	print_mat(I3,I3_n,I3_m)
+	
+	print_str("\n Afficher A \n")
+	print_mat(A,A_n,A_m)
+	
+	print_str("\n Afficher B \n")
+	print_mat(B,A_n,A_m)
+	
+	print_str("\n A + B \n")
+	add_mat(T,A,B,A_n,A_m)
+	print_mat(T,A_n,A_m)
+	
+	print_str("\n Transpose A \n")
+	transpose_mat(T,A,A_n,A_m)
+	print_mat(T,A_m,A_n)
+	
+	print_str("\n A \n")
+	print_mat(A,A_n,A_m)
+	
+	print_str("\n A * B \n")
+	mult_mat(P,T,B,A_m,A_n,A_m)
+	print_mat(P,A_m,A_m)
+	
+	jr $ra
+
+.globl	main
+
+main:
+	
+	# print_mat(M1,M1_n,M1_m)
+	
+	jal test_matrix
+	
+	print_str("Fin main")
+	
+	exit(0)
