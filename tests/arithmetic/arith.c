@@ -12,7 +12,8 @@ int main()
     f = f + 5.2 * 2 * 2.1 * f * 1.01;
     print(f);
     printf("\n\n");
-    testFLOAT = testFLOAT + 5 * 2;
+    testFLOAT = testFLOAT + 5 * 2 / 2;
+    testFLOAT = (testFLOAT - 5) + 5 - 2;
     print(testFLOAT);
     printf("\n\n");
     return 0;
