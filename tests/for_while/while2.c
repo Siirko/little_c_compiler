@@ -15,5 +15,6 @@ int main()
         }
         i++;
     }
+    print(a);
     return a - 1000;
 }

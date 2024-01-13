@@ -9,8 +9,9 @@
     #include "../include/symbol.h"
     #include "../include/quadr.h"
     #include "../include/utils.h"
+    #include "../include/yacc_struct.h"
 
-
+    # define YYLTYPE_IS_DECLARED 1 /* alert the parser that we have our own definition */
     int yylex();
     int yywrap();
     extern char* yytext;
@@ -57,9 +58,15 @@
         char else_block[1024];
     } cond_node_t;
 }
+
+%{
+    vec_iterator_node_t vec_iterator_loops;
+%}
+
 %{
     void yyerror(const char *msg);
     void lyyerror(YYLTYPE t, char *s, ...);
+    void init_iterator(struct node *n1, struct node *n3, YYLTYPE t1, YYLTYPE t3);
     void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn, YYLTYPE t1, YYLTYPE t3, YYLTYPE t);
     symbol_t *check_variable_declaration(YYLTYPE t, char* token);
     bool check_function_declaration(YYLTYPE t, char* token);
@@ -71,12 +78,12 @@
 %token <node_t> ADD MULTIPLY DIVIDE SUBTRACT UNARY
 %token <node_t> FOR WHILE RETURN
 
-%type <node_t> iterator iterator_init 
+%type <node_t> iterator iterator_init iterator_for
 %type <node_t> printf_statement print_statement
 %type <node_t> program body scope return
 %type <node_t> function function_call function_call_args function_call_arg function_args function_arg function_body
 %type <node_t> datatype expression init inits value
-%type <node_t> statement body_element for_statement while_statement if_statement else
+%type <node_t> statement body_element for_statement scope_for while_statement if_statement else
 
 %type <cond_node_t> condition 
 %{
@@ -179,6 +186,19 @@ scope: '{' {
     }
     ;
 
+scope_for: '{' body {
+        if(is_for)
+        {
+            iterator_node_t it = vec_pop(&vec_iterator_loops);
+            if(check_variable_declaration(it.t1, it.n1->name) != NULL)
+                init_iterator(it.n1, it.n3, it.t1, it.t3);
+        }
+    } '}' {
+        --depth_scope;
+        clear_empty_hashmaps(t_sym_tab, depth_scope+1, current_function);
+    }
+    ;
+
 while_statement: WHILE { 
         is_while = true;
         is_for = false;
@@ -196,7 +216,7 @@ while_statement: WHILE {
 
 for_statement: FOR { 
         is_for = true;
-    } '(' iterator_init ';' condition ';' iterator ')' scope {
+    } '(' iterator_init ';' condition ';' iterator_for ')' scope_for {
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $6.if_block, QUADR_ARG_GOTO, TYPE_STR);
         quadr_gencode(QUAD_TYPE_GOTO, 0, (quadr_arg_t){0}, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
@@ -250,30 +270,44 @@ else: ELSE scope {
     ;
 
 
+iterator_for: ID { 
+        check_variable_declaration(@1, $1.name);
+    } UNARY {
+        if(!is_for)
+            init_iterator(&$1, &$3, @1, @3);
+        else
+        {
+            iterator_node_t it = {
+                .n1 = &$1,
+                .n3 = &$3,
+                .t1 = @1,
+                .t3 = @3,
+            };
+            vec_push(&vec_iterator_loops, it);
+        }
+    }
+    | UNARY ID{
+        if(!is_for)
+            init_iterator(&$2, &$1, @2, @1);
+        else 
+        {
+            iterator_node_t it = {
+                .n1 = &$2,
+                .n3 = &$1,
+                .t1 = @2,
+                .t3 = @1,
+            };
+            vec_push(&vec_iterator_loops, it);
+        }
+    }
+
 iterator: ID { 
         check_variable_declaration(@1, $1.name);
     } UNARY {
-        char tmp[1024] = {0};
-        sprintf(tmp, "t%d", temp_var);
-        
-        quadr_arg_t arg1 = {0};
-        quadr_init_arg(&arg1, $1.name, QUADR_ARG_STR, TYPE_INT);
-        quadr_arg_t _arg1 = {0};
-        quadr_init_arg(&_arg1, $1.name, QUADR_ARG_STR, TYPE_INT);
-
-        quadr_arg_t arg2 = {0};
-        quadr_init_arg(&arg2, "1", QUADR_ARG_INT, TYPE_INT);
-        
-        quadr_arg_t res = {0};
-        quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
-        quadr_arg_t _res = {0};
-        quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
-        
-        bool is_add = strcmp($3.name, "++") == 0;
-        enum quad_ops op = is_add ? QUAD_OP_ADD : QUAD_OP_SUB;
-        quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
-        quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
-        temp_var = 0;
+        init_iterator(&$1, &$3, @1, @3);
+    }
+    | UNARY ID{
+        init_iterator(&$2, &$1, @2, @1);
     }
 
 iterator_init: datatype ID {
@@ -676,6 +710,34 @@ void quadr_genrelop(char *if_block, char *else_block, char *arg1, char *arg2, en
         sprintf(if_block, "L%d", labels++);
         sprintf(else_block, "L%d", labels++);
     }
+}
+
+void init_iterator(struct node *n1, struct node *n3, YYLTYPE t1, YYLTYPE t3)
+{
+    // n1 is the iterator
+    // n3 is the operator
+    char tmp[1024] = {0};
+    sprintf(tmp, "t%d", temp_var);
+    
+    quadr_arg_t arg1 = {0};
+    quadr_init_arg(&arg1, n1->name, QUADR_ARG_STR, TYPE_INT);
+    quadr_arg_t _arg1 = {0};
+    quadr_init_arg(&_arg1, n1->name, QUADR_ARG_STR, TYPE_INT);
+
+    quadr_arg_t arg2 = {0};
+    quadr_init_arg(&arg2, "1", QUADR_ARG_INT, TYPE_INT);
+    
+    quadr_arg_t res = {0};
+    quadr_init_arg(&res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
+    quadr_arg_t _res = {0};
+    quadr_init_arg(&_res, tmp, QUADR_ARG_TMP_VAR, TYPE_INT);
+    
+    bool is_add = strcmp(n3->name, "++") == 0;
+    enum quad_ops op = is_add ? QUAD_OP_ADD : QUAD_OP_SUB;
+    quadr_gencode(QUAD_TYPE_BINARY_ASSIGN, op, arg1, arg2, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+    quadr_gencode(QUAD_TYPE_COPY, 0, _res, (quadr_arg_t){0}, _arg1, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+
+    temp_var = 0;
 }
 
 void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3, struct node *nn, YYLTYPE t1, YYLTYPE t3, YYLTYPE t)

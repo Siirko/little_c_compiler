@@ -187,6 +187,17 @@ const char *quadr_op_str[][2] = {[QUAD_OP_ADD] = {"add", "add.s"},
 void mips_operation_gen(quadr_t *quadr, FILE *file, char *tmp_reg_int, char *tmp_reg_float, enum quad_ops op,
                         enum quad_op_type op_type)
 {
+    // J'ajoute un pensement sur une fracture qui ne peut être refermé ....
+    // #société
+    if (op == QUAD_OP_DIV || op == QUAD_OP_SUB)
+    {
+        if (quadr->arg1.type == QUADR_ARG_TMP_VAR)
+        {
+            char reg = op_type == OP_TYPE_INT ? 't' : 'f';
+            fprintf(file, "\t%s $%c1, $%c1, $%c0\n", quadr_op_str[op][op_type], reg, reg, reg);
+            goto end;
+        }
+    }
     // case where f2 and f1 are tmp var
     // example: f2 = f1 + f
     if (quadr->res.type == QUADR_ARG_TMP_VAR && quadr->arg1.type == QUADR_ARG_TMP_VAR)
@@ -206,6 +217,7 @@ void mips_operation_gen(quadr_t *quadr, FILE *file, char *tmp_reg_int, char *tmp
     else
         fprintf(file, "\t%s $%s, $f0, $%s\n", quadr_op_str[op][op_type], quadr->res.val, quadr->res.val);
 
+end:
     if (op_type == OP_TYPE_FLOAT)
         fprintf(file, "\tmov.s $f0, $%s\n", quadr->res.val);
     else
