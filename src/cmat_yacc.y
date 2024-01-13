@@ -202,7 +202,6 @@ scope_for: '{' body {
 while_statement: WHILE { 
         is_while = true;
         is_for = false;
-        printf("while statement\n");
     } '(' condition ')' scope {
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $4.if_block, QUADR_ARG_GOTO, TYPE_STR);
