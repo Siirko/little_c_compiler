@@ -5,6 +5,7 @@
 #include "../include/quadr.h"
 #include "../include/symbol.h"
 #include "../include/utils.h"
+#include "../include/yacc_struct.h"
 #include <stdio.h>
 
 extern int yyparse();
@@ -14,6 +15,7 @@ extern hashmap_t *t_sym_tab;
 extern vec_int_t i_if_end;
 extern vec_quadr_t vec_quadr;
 extern hashmap_t *func_args;
+extern vec_iterator_node_t vec_iterator_loops;
 extern int error_count;
 
 struct arguments arguments;
@@ -24,6 +26,7 @@ void cmat_init()
     func_args = hashmap_init(10);
     vec_init(&vec_quadr);
     vec_init(&i_if_end);
+    vec_init(&vec_iterator_loops);
 }
 
 void cmat_free(void)
@@ -51,6 +54,7 @@ void cmat_free(void)
 
     vec_deinit(&i_if_end);
     vec_deinit(&vec_quadr);
+    vec_deinit(&vec_iterator_loops);
 
     hashmap_iterate(func_args, free_func_args);
     hashmap_iterate(t_sym_tab, free_scopes);

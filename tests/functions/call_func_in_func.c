@@ -8,7 +8,7 @@ int test(int a)
 int loop(int a)
 {
     int res;
-    for (int i = 0; i < a; i++)
+    for (int i = 0; i < a; ++i)
     {
         res = a + i;
         // print(res);
