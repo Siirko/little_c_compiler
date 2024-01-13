@@ -487,8 +487,8 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
             else
                 fprintf(file, "\tlw $v0, %s_%s_%d_%d\n", quadr.arg1.val, quadr.arg1.scope.function_name,
                         quadr.arg1.scope.depth, quadr.arg1.scope.width);
-            fprintf(file, "\n\tlw $s0, 0($sp) # Load previous value\n"
-                          "\taddi $sp,$sp,4 # Moving Stack pointer\n");
+            fprintf(file, "\n\tlw $ra, 0($sp)\n"
+                          "\taddi $sp, $sp, 4\n");
             fprintf(file, "\tjr $ra\n");
             function_arg_index = -1;
             break;
@@ -502,8 +502,8 @@ void mips_gen(hashmap_t *t_sym_tab, vec_quadr_t *vec_quadr, FILE *file)
         {
             fprintf(file, "%s:\n", quadr.res.val);
             if (function_arg_index == -1)
-                fprintf(file, "\taddi $sp,$sp,-4 # Moving Stack pointer\n"
-                              "\tsw $s0, 0($sp) # Save return address\n\n");
+                fprintf(file, "\taddi $sp,$sp,-4\n"
+                              "\tsw $ra, 0($sp)\n");
             break;
         }
         case QUAD_TYPE_LABEL:
