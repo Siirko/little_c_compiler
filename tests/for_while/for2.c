@@ -1,6 +1,6 @@
 int main()
 {
-    int zzz;
+    int zzz = 0;
     for (int i = 0; i < 10; i++)
     {
         for (int j = 0; j < 10; j++)
@@ -16,6 +16,7 @@ int main()
             zzz = zzz + 1;
         }
     }
-    printf("%d\n", zzz);
+    print(zzz);
+    // printf("%d\n", zzz);
     return zzz;
 }
