@@ -73,7 +73,7 @@
 %}
 
 %token <node_t> PRINT PRINTF 
-%token <node_t> ID STR INT FLOAT FLOAT_NUM NUMBER
+%token <node_t> ID STR INT FLOAT FLOAT_NUM NUMBER CONST
 %token <node_t>  IF ELSE LE GE EQ NE GT LT
 %token <node_t> ADD MULTIPLY DIVIDE SUBTRACT UNARY
 %token <node_t> FOR WHILE RETURN
@@ -351,10 +351,33 @@ statement: datatype ID {
             quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
         }
     }
+    | CONST datatype ID {
+        add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_CONST, &data_type, yytext, counter); 
+    } inits {
+        if($5.is_null)
+        {
+            symbol_t *symbol = check_variable_declaration(@3, $3.name);
+            data_type = symbol->data_type;
+            quadr_arg_t arg1 = {0};
+            if(data_type == TYPE_INT)
+                quadr_init_arg(&arg1, "0", QUADR_ARG_INT, TYPE_INT);
+            else if(data_type == TYPE_FLOAT)
+                quadr_init_arg(&arg1, "0.0", QUADR_ARG_FLOAT, TYPE_FLOAT);
+
+            quadr_arg_t res = {0};
+            quadr_init_arg(&res, $3.name, QUADR_ARG_STR, data_type);
+
+            quadr_gencode(QUAD_TYPE_COPY, 0, arg1, (quadr_arg_t){0}, res, &vec_quadr,  t_sym_tab, depth_scope, current_function);
+        }
+    }
     | ID { 
         symbol_t *symbol = check_variable_declaration(@1, $1.name);
         if(symbol != NULL)
+        {
             data_type = symbol->data_type;
+            if(symbol->type == TYPE_CONST)
+                lyyerror(@1, "Cannot assign value to a constant");
+        }
     } '=' expression {
         quadr_arg_t arg1 = {0};
         
@@ -395,7 +418,10 @@ init: '=' expression {
             else
                 data_type_tmp = TYPE_INT;
         }
-        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
+        if($2.is_function)
+            quadr_init_arg(&arg1, "v0", QUADR_ARG_RETURN_FUNCTION, data_type_tmp);
+        else
+            quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $$.name, $$.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);
