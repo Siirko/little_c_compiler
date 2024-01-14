@@ -1,5 +1,4 @@
 #include "../include/args_parser.h"
-#include "../include/ast.h"
 #include "../include/hashmap.h"
 #include "../include/mips.h"
 #include "../include/quadr.h"
