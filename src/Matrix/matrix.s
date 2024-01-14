@@ -173,7 +173,100 @@ jal scal_div_matrix
 
 .end_macro
 
+.macro	allocate_mat(%n,%m)
+
+lw $a0, %n   # Charge le nombre de lignes
+lw $a1, %m   # Charge le nombre de colonnes
+
+jal allocate_matrix
+
+.end_macro
+
+macro allocate_mati(%n,%m)
+li $a0, %n   # Charge le nombre de lignes
+li $a1, %m   # Charge le nombre de colonnes
+
+jal allocate_matrix
+
 .text
+
+macro copy_matrix(%SRC,%DEST,%n,%m)
+la $t0, %SRC
+la $t1, %DEST
+lw $t2, %n
+lw $t3, %m
+
+subi $sp, $sp, 16        # Allouer de l'espace pour 3 mots (12 octets) sur la pile
+sw $t0, 0($sp)           # Sauvegarde de $t0 à l'adresse actuelle du pointeur de pile
+sw $t1, 4($sp)           # Sauvegarde de $t1 à l'adresse actuelle + 4 octets
+sw $t2, 8($sp)           # Sauvegarde de $t2 à l'adresse actuelle + 8 octets
+sw $t3, 12($sp)          # Sauvegarde de $t3 à l'adresse actuelle + 12 octets
+
+jal copy_matrix
+
+
+.end_macro
+
+copy_matrix:
+    lw $t0, 0($sp)           # Restaurer M1 depuis la pile, t0 = &M1
+    lw $t1, 4($sp)           # Restaurer M2 depuis la pile, t1 = &M2
+    lw $t2, 8($sp)           # Restaurer n depuis la pile, t2 = n
+    lw $t3, 12($sp)          # Restaurer m depuis la pile, t3 = m
+
+    addi $sp, $sp, 16        # Restaurer $ra et $fp
+
+    li $t4, 0                # $t4 = i = 0
+    for_copy_matrix1:        # for (i = 0; i < n; i++)
+    bge $t4, $t2, for_copy_matrix1_end # branch if (i >= n)
+        li $t5, 0                # $t5 = j = 0
+        for_copy_matrix2:        # for (j = 0; j < m; j++)
+        bge $t5, $t3, for_copy_matrix2_end # branch if (j >= m)
+            mul  $t6, $t3, $t4    # $t6 = i × m
+            addu $t6, $t6, $t5    # $t6 = i × m + j
+            sll  $t6, $t6, 2      # $t6 = (i × m + j) × 4
+
+            addu $s0, $t0, $t6    # $s0 = &M1 + (i × m + j) × 4
+            addu $s1, $t1, $t6    # $s1 = &M2 + (i × m + j) × 4
+
+            l.s   $f0, 0($s0)      # $f0 = M1[i][j]
+            s.s   $f0, 0($s1)      # M2[i][j] = M1[i][j]
+
+            addi $t5, $t5, 1      # j++
+            b for_copy_matrix2
+        end_for_copy_matrix2:
+    
+    addi $t4, $t4, 1      # i++
+    b for_copy_matrix1
+    end_for_copy_matrix1:
+
+    jr $ra
+
+allocate_matrix:
+    # $a0: n 
+    # $a1: m
+    # Au retour,
+    # $v0: Adresse de la "structure" matrice
+
+    # Calcul de la taille de la matice
+    mul $a0, $a0, $a1        # $a0 = n * m
+    sll $a0, $a0, 2          # $a0 = (n * m) * 4 (size of float)
+
+    # Appel sbrk qui étend la memoire du programme et renvoie un pointeur 
+    # vers la nouvelle zone allouée
+    li $v0, 9
+    move $a0, $t0
+    syscall
+	
+    # On regarde si une zone a pu être allouée
+    bgtz $v0, matrix_allocated
+
+    # Sinon on affiche un message d'erreur et on quitte
+    print_str("Erreur allocation matrice !\n")
+    exit(1)
+    
+    matrix_allocated:
+    # La matrice est allouée est son adresse est dans $v0 +8
+    jr $ra
 
 printmat:
     # Restauration des registres sauvegardés

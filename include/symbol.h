@@ -13,6 +13,7 @@
     X(TYPE_INT, "int")                                                                                       \
     X(TYPE_STR, "str")                                                                                       \
     X(TYPE_FLOAT, "float")                                                                                   \
+    X(TYPE_MATRIX, "matrix")                                                                                 \
     X(TYPE_NAD, "NaD")
 
 #define X(a, b) a,
@@ -35,6 +36,7 @@ typedef struct symbol
     enum symbol_type type;
     enum data_type data_type;
     int line;
+    int n,m;
 } symbol_t;
 
 typedef struct scope

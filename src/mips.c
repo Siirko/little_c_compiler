@@ -3,6 +3,13 @@
 #include "../include/utils.h"
 #include <ctype.h>
 
+#define mips_matrix_filename "src/Matrix/matrix.s"
+
+void mips_include_matrix(FILE *file)
+{
+    fprintf(file, ".include \"%s\"\n", mips_matrix_filename);
+}
+
 void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
 {
     fprintf(file, ".data\n");
@@ -44,6 +51,15 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
                             break;
                         case TYPE_FLOAT:
                             fprintf(file, "\t%s_%s_%d_%d: .float 0.0\n", symbol->id, function_scope, i, j);
+                            break;
+                        case TYPE_MATRIX:
+                            fprintf(file,   "\t%s_%s_%d_%d_n: .word %d\n"\
+                                            "\t%s_%s_%d_%d_m: .word %d\n"\
+                                            "\t%s_%s_%d_%d: .float 0.0:%d\n", 
+                                    
+                                    symbol->id, function_scope, i, j, symbol->n ,
+                                    symbol->id, function_scope, i, j, symbol->m,
+                                    symbol->id, function_scope, i, j, symbol->n*symbol->m * 4);
                             break;
                         default:
                             break;
@@ -98,6 +114,7 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
 {
     bool arg1_int = quadr.arg1.type == QUADR_ARG_INT;
     bool arg1_float = quadr.arg1.type == QUADR_ARG_FLOAT;
+    bool arg1_matrix = quadr.arg1.type == QUADR_ARG_MATRIX;
     bool arg1_tmp = quadr.arg1.type == QUADR_ARG_TMP_VAR;
     bool res_tmp = quadr.res.type == QUADR_ARG_TMP_VAR;
 
@@ -110,8 +127,23 @@ void mips_copy_assign(quadr_t quadr, FILE *file)
     ////////////////////////////////////////////////
     if (quadr.arg1.type == QUADR_ARG_RETURN_FUNCTION)
         fprintf(file, "\tmove $%s, $%s\n", tmp_reg, quadr.arg1.val);
-    else if (arg1_int && quadr.res.data_type != TYPE_FLOAT)
+    else if (arg1_int && quadr.res.data_type != TYPE_FLOAT && quadr.res.data_type != TYPE_MATRIX)
         fprintf(file, "\tli $t0, %s\n", quadr.arg1.val);
+    else if(arg1_matrix && quadr.res.data_type == TYPE_MATRIX){
+        // for a matrix, we need to copy the address of the matrix
+        // in order to copy the matrix itself
+        matrix_t *matrix = (matrix_t *) quadr.res.val;
+        matrix_t *matrix_curr = (matrix_t *) quadr.arg1.val;
+        fprintf(file, " allocate_mati(%u,%u)\n"\
+	                  " addi $v0,$v0,4\n"\
+	                  " sw  $v0, %s\n"\
+                      " la $t0, %s\n"\
+                      " matrix_copy(%s, %s,%u,%u)\n",
+                       matrix->n,matrix->m,
+                       matrix_curr->addr_label,
+                       matrix_curr->addr_label,
+                       matrix->addr_label,matrix_curr->addr_label,matrix->n,matrix->m);
+    }
     else if (arg1_float || (quadr.res.data_type == TYPE_FLOAT && quadr.arg1.data_type == TYPE_INT))
     {
         float f = strtof(quadr.arg1.val, NULL);

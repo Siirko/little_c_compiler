@@ -61,6 +61,17 @@ static const char *quad_op_str[] = {QUAD_OPS};
 #undef X
 #pragma GCC diagnostic pop
 
+typedef struct matrix{
+                    // 1 word in mips = 4 bytes
+    uint32_t n;     // number of rows
+    uint32_t m;     // number of columns
+    uint32_t *data; // matrix data (n*m words)
+    char *addr_label;  // matrix address
+} matrix_t;
+
+void free_matrix_t(matrix_t *matrix);
+
+
 typedef struct quadr_arg
 {
     char *val;
@@ -69,6 +80,7 @@ typedef struct quadr_arg
         QUADR_ARG_STR,
         QUADR_ARG_INT,
         QUADR_ARG_FLOAT,
+        QUADR_ARG_MATRIX,
         QUADR_ARG_TMP_VAR,
         QUADR_ARG_LABEL,
         QUADR_ARG_GOTO,

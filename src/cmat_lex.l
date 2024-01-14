@@ -31,6 +31,7 @@ unary "++"|"--"
 "print"                    { strncpy(yylval.node_t.name, yytext, 1024); return PRINT; }
 "int"                       { strncpy(yylval.node_t.name, yytext, 1024); return INT; }
 "float"                     { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT; }
+"matrix"                    { strncpy(yylval.node_t.name, yytext, 1024); return MATRIX; }
 
 "return"                    { strncpy(yylval.node_t.name, yytext, 1024); return RETURN; }
 "for"	                    { strncpy(yylval.node_t.name, yytext, 1024); return FOR; }
@@ -47,12 +48,14 @@ unary "++"|"--"
 ">="                        { strncpy(yylval.node_t.name, yytext, 1024); return GE; }
 "=="                        { strncpy(yylval.node_t.name, yytext, 1024); return EQ; }
 "!="                        { strncpy(yylval.node_t.name, yytext, 1024); return NE; }
-">"	                    { strncpy(yylval.node_t.name, yytext, 1024); return GT; }
-"<"	                    { strncpy(yylval.node_t.name, yytext, 1024); return LT; }
+">"	                        { strncpy(yylval.node_t.name, yytext, 1024); return GT; }
+"<"	                        { strncpy(yylval.node_t.name, yytext, 1024); return LT; }
 "+"                         { strncpy(yylval.node_t.name, yytext, 1024); return ADD; }
 "-"                         { strncpy(yylval.node_t.name, yytext, 1024); return SUBTRACT; }
 "/"                         { strncpy(yylval.node_t.name, yytext, 1024); return DIVIDE; }
 "*"                         { strncpy(yylval.node_t.name, yytext, 1024); return MULTIPLY; }
+"~"                         { strncpy(yylval.node_t.name, yytext, 1024); return TRANSPOSE; }
+
 
 \/\/.*                      { ; }
 \/\*(.*\n)*.*\*\/           { ; } 
@@ -63,8 +66,9 @@ unary "++"|"--"
     strncpy(linebuf, yytext+1, sizeof(linebuf)); /* save the next line */
     yyless(1); /* give back all but the \n to rescan */
 }
-.	                    { return *yytext; }
+.	                        { return *yytext; }
 ["]([^"]|\\(.|\n))*["]                     { strncpy(yylval.node_t.name, yytext, 1024); return STR; }
+
 
 
 

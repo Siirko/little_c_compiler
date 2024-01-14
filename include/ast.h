@@ -7,6 +7,7 @@ enum ast_type
     AST_NULL = -1,
     AST_INTEGER,
     AST_FLOAT,
+    AST_MATRIX,
     AST_ID,
     AST_ADD,
     AST_SUBTRACT,

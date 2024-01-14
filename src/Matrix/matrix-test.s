@@ -27,6 +27,24 @@ syscall
 
 # Macros opérations matricielles
 
+# Sauvegarde l'adresse de l'élément i*m +j d'une Matrice M
+# comme M[i][j] en C et avec m, le nombre de colonnes
+# l'adresse de cet élémetn est stocké dans a0
+
+.macro mat_elt(%M,%i,%j,%m)
+li $t0, %i
+li $t1, %j
+lw $t2, %m
+la $t3, %M
+
+
+mul  $t0, $t0, $t2  # $t0 = i × m
+addu $t0, $t0, $t1  # $t0 = i × m + j
+sll  $t0, $t0, 2    # $t0 = (i × m + j) × 4
+addu $t0, $t0,$t3   # $t0 = &M + (i × m + j) × 4
+
+.end_macro 
+
 .macro	print_mat(%x,%y,%z)
 la $t0, %x
 lw $t1, %y
@@ -172,6 +190,16 @@ sw $t3, 12($sp)          # Sauvegarde de $t3 à l'adresse actuelle + 12 octets
 jal scal_div_matrix
 
 .end_macro
+
+.macro	allocate_mat(%n,%m)
+
+lw $a0, %n   # Charge le nombre de lignes
+lw $a1, %m  # Charge le nombre de colonnes
+
+
+jal allocate_matrix
+
+.end_macro
 	
 	
 .data
@@ -195,10 +223,36 @@ I3: .float 1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0#3.0:9
 I3_n: .word 3
 I3_m: .word 3
 
-# Chaîne de caractères pour le retour à la ligne
-breakline: .asciiz "\n"
 
 .text
+
+allocate_matrix:
+    # $a0: n 
+    # $a1: m
+    # Au retour,
+    # $v0: Adresse de la "structure" matrice
+
+    # Calcul de la taille de la matice
+    mul $a0, $a0, $a1        # $a0 = n * m
+    sll $a0, $a0, 2          # $a0 = (n * m) * 4 (size of float)
+    
+    
+    # Appel sbrk qui étend la memoire du programme et renvoie un pointeur 
+    # vers la nouvelle zone allouée
+    li $v0, 9
+    syscall
+	
+    # On regarde si une zone a pu être allouée
+    bgtz $v0, matrix_allocated
+
+    # Sinon on affiche un message d'erreur et on quitte
+    print_str("Erreur allocation matrice !\n")
+    exit(1)
+    
+    matrix_allocated:
+    # La matrice est allouée est son adresse est dans $v0 +8
+    jr $ra
+
 
 printmat:
     # Restauration des registres sauvegardés
@@ -631,6 +685,11 @@ test_matrix:
 	#sw $t4, 16($sp)          # Sauvegarde de $t4 à l'adresse actuelle + 16 octets
 
 	#jal add_matrix
+	
+	subi  $sp,$sp,4 # Moving Stack pointer
+    	sw $ra, 0($sp) # Save return address
+
+
 		
 	print_str("\n Matrice M2 : \n")
 	print_mat(M2,M2_n,M2_m)
@@ -680,10 +739,33 @@ test_matrix:
 	print_str("\n A \n")
 	print_mat(A,A_n,A_m)
 	
-	print_str("\n A * B \n")
-	mult_mat(P,T,B,A_m,A_n,A_m)
-	print_mat(P,A_m,A_m)
+	print_str("\n Test element access A[1][1]\n")
+	mat_elt(A,1,1,A_m)
+	l.s   $f1, 0($t0) 
+	print_float($f1)
 	
+	print_str("\n Test element access A[1][2]\n")
+	mat_elt(A,1,2,A_m)
+	l.s   $f2, 0($t0) 
+	print_float($f2)
+	
+	.data 
+		temp_T : .word 0 
+	.text
+	
+	allocate_mat(A_m,A_m)
+	addi $v0,$v0,8
+	sw  $v0, temp_T
+	
+	print_str("\n A * B \n")
+	mult_mat($v0,T,B,A_m,A_n,A_m)
+	print_mat($v0,A_m,A_m)
+	
+	
+	lw $ra, 0($sp)
+    	addi $sp, $sp, 4
+
+				
 	jr $ra
 
 .globl	main
@@ -692,8 +774,8 @@ main:
 	
 	# print_mat(M1,M1_n,M1_m)
 	
-	jal test_matrix
 	
-	print_str("Fin main")
+	jal test_matrix
+
 	
 	exit(0)

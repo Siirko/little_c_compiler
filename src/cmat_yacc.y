@@ -73,10 +73,11 @@
 %}
 
 %token <node_t> PRINT PRINTF 
-%token <node_t> ID STR INT FLOAT FLOAT_NUM NUMBER
+%token <node_t> ID STR INT FLOAT FLOAT_NUM NUMBER MATRIX
 %token <node_t>  IF ELSE LE GE EQ NE GT LT
-%token <node_t> ADD MULTIPLY DIVIDE SUBTRACT UNARY
+%token <node_t> ADD MULTIPLY DIVIDE SUBTRACT UNARY TRANSPOSE
 %token <node_t> FOR WHILE RETURN
+%token <node_t>  mat_expr 
 
 %type <node_t> iterator iterator_init iterator_for
 %type <node_t> printf_statement print_statement
@@ -84,6 +85,8 @@
 %type <node_t> function function_call function_call_args function_call_arg function_args function_arg function_body
 %type <node_t> datatype expression init inits value
 %type <node_t> statement body_element for_statement scope_for while_statement if_statement else
+%type <node_t> matrix_statement matrix_declaration matrix_initializer matrix_element matrix_element_assignment
+
 
 %type <cond_node_t> condition 
 %{
@@ -152,6 +155,7 @@ function_arg: datatype ID {
 
 datatype: INT { data_type = TYPE_INT; }
     | FLOAT { data_type = TYPE_FLOAT; }
+    | MATRIX { data_type = TYPE_MATRIX; }
     ;
 
 
@@ -165,6 +169,7 @@ body_element: for_statement
     | while_statement
     | if_statement
     | statement ';'
+    | matrix_statement ';'
     | printf_statement
     | print_statement
     /* | return */
@@ -336,6 +341,38 @@ iterator_init: datatype ID {
         }
     }
 
+matrix_statement : matrix_declaration
+                 | matrix_declaration '=' matrix_initializer
+                 | matrix_element_assignment
+                 ;
+
+matrix_element_assignment : ID matrix_element '=' matrix_element
+                          | ID matrix_element '=' NUMBER
+                          | ID matrix_element '=' FLOAT_NUM
+                          ;
+
+matrix_element: '[' NUMBER ']' '[' NUMBER ']'
+              | '[' ']' '[' ']'
+              ;
+
+matrix_declaration: MATRIX ID '[' NUMBER ']' '[' NUMBER ']'
+                  | MATRIX ID '[' ']' '[' ']'
+                  | MATRIX ID
+                 ;
+
+matrix_initializer: '{' row_list '}';
+
+row_list: row
+        | row_list ',' row ;
+
+row: '{' initializer_expression_list '}';
+
+initializer_expression_list: FLOAT_NUM
+                           | initializer_expression_list ',' FLOAT_NUM
+                           | %empty;
+
+
+
 statement: datatype ID {
         add_symbol_to_scope(t_sym_tab, depth_scope, current_function, TYPE_VARIABLE, &data_type, yytext, counter); 
     } inits {
@@ -348,6 +385,8 @@ statement: datatype ID {
                 quadr_init_arg(&arg1, "0", QUADR_ARG_INT, TYPE_INT);
             else if(data_type == TYPE_FLOAT)
                 quadr_init_arg(&arg1, "0.0", QUADR_ARG_FLOAT, TYPE_FLOAT);
+            else if(data_type == TYPE_MATRIX)
+                quadr_init_arg(&arg1, "0", QUADR_ARG_MATRIX, TYPE_MATRIX);
 
             quadr_arg_t res = {0};
             quadr_init_arg(&res, $2.name, QUADR_ARG_STR, data_type);
@@ -750,8 +789,10 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     {
         if(n1->name[0] == 'f')
             data_type_tmp = TYPE_FLOAT;
-        else
+        else if(n1->name[0]== 't')
             data_type_tmp = TYPE_INT;
+        else
+            data_type_tmp = TYPE_MATRIX;
     }
     else if(n1->is_variable)
     {
@@ -773,8 +814,10 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     {
         if(n3->name[0] == 'f')
             data_type_tmp = TYPE_FLOAT;
-        else
+        else if(n3->name[0]== 't')
             data_type_tmp = TYPE_INT;
+        else
+            data_type_tmp = TYPE_MATRIX;
     }
     else if(n3->is_variable)
     {
@@ -805,8 +848,10 @@ void init_arg_expression(enum quad_ops op_exp, struct node *n1, struct node *n3,
     {
         if(nn->name[0] == 'f')
             data_type_tmp = TYPE_FLOAT;
-        else
+        else if (nn->name[0] == 'f')
             data_type_tmp = TYPE_INT;
+        else
+            data_type_tmp = TYPE_MATRIX;
     }
     else if(nn->is_variable)
     {

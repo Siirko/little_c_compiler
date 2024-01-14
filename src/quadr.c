@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+void free_matrix_t(matrix_t *matrix){
+    if(matrix->data == NULL) return;
+    free(matrix->data);
+    free(matrix->addr_label);
+}
+
 void quadr_init_arg(quadr_arg_t *arg, char *val, enum quadr_arg_types type, enum data_type data_type)
 {
     arg->data_type = data_type;
