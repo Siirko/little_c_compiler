@@ -14,8 +14,7 @@ float gen_pi(int iterations)
     for (int i = 0; i < iterations; i++)
     {
         int tmp = (2 * i + 1);
-        float term;
-        term = 1.0 / tmp;
+        float term = 1.0 / tmp;
         // int mod = mod_func(i, 2);
         int mod = i;
         while (mod >= 2)
