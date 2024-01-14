@@ -395,7 +395,10 @@ init: '=' expression {
             else
                 data_type_tmp = TYPE_INT;
         }
-        quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
+        if($2.is_function)
+            quadr_init_arg(&arg1, "v0", QUADR_ARG_RETURN_FUNCTION, data_type_tmp);
+        else
+            quadr_init_arg(&arg1, $2.name, $2.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type_tmp);
 
         quadr_arg_t res = {0};
         quadr_init_arg(&res, $$.name, $$.is_temperorary ? QUADR_ARG_TMP_VAR : QUADR_ARG_STR, data_type);

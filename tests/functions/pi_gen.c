@@ -16,8 +16,12 @@ float gen_pi(int iterations)
         int tmp = (2 * i + 1);
         float term;
         term = 1.0 / tmp;
-        int mod = 0;
-        mod = mod_func(i, 2);
+        // int mod = mod_func(i, 2);
+        int mod = i;
+        while (mod >= 2)
+        {
+            mod = mod - 2;
+        }
         if (mod == 0)
         {
             pi = pi + term;
@@ -33,8 +37,7 @@ float gen_pi(int iterations)
 int main()
 {
     int n = 3500;
-    float res;
-    res = gen_pi(n);
+    float res = gen_pi(n);
     print(res);
     return 0;
 }

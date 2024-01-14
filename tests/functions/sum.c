@@ -22,8 +22,7 @@ int double_it_while(int a)
 
 int main()
 {
-    int res;
-    res = double_it_for(10);
+    int res = double_it_for(10);
     print(res);
     printf("\n");
     res = double_it_while(10);

@@ -5,3 +5,4 @@ src/cmat_yacc.c
 src/cmat_yacc.h
 vgcore.*
 *.asm
+*.out

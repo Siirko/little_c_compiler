@@ -14,7 +14,7 @@ test_file() {
         # "$CMAT_PATH"/cmat -f "$file" -o /dev/null &> "$OUTPUT_PATH".out
         # redirect output to stderr and stdout
         "$CMAT_PATH"/cmat -f "$file" -o /dev/null > "$OUTPUT_PATH".out 2>&1
-        "$CMAT_PATH"/cmat -f "$file" -o /dev/null
+        cat "$OUTPUT_PATH".out
         res=$(diff "$OUTPUT_PATH".out "$OUTPUT_PATH".res)
         if [ -z "$res" ] ; then
             echo -e "\e[1;32mTest passed\e[0m"
@@ -26,7 +26,7 @@ test_file() {
     else
         "$CMAT_PATH"/cmat -f "$file" -o "$OUTPUT_PATH".asm
         $mars_command "$OUTPUT_PATH".asm &> "$OUTPUT_PATH".out
-        $mars_command "$OUTPUT_PATH".asm
+        cat "$OUTPUT_PATH".out
         res=$(diff "$OUTPUT_PATH".out "$OUTPUT_PATH".res)
         if [ -z "$res" ] ; then
             echo -e "\e[1;32mTest passed\e[0m"
