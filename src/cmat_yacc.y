@@ -187,12 +187,9 @@ scope: '{' {
     ;
 
 scope_for: '{' body {
-        if(is_for)
-        {
-            iterator_node_t it = vec_pop(&vec_iterator_loops);
-            if(check_variable_declaration(it.t1, it.n1->name) != NULL)
-                init_iterator(it.n1, it.n3, it.t1, it.t3);
-        }
+        iterator_node_t it = vec_pop(&vec_iterator_loops);
+        if(check_variable_declaration(it.t1, it.n1->name) != NULL)
+            init_iterator(it.n1, it.n3, it.t1, it.t3);
     } '}' {
         --depth_scope;
         clear_empty_hashmaps(t_sym_tab, depth_scope+1, current_function);
@@ -525,6 +522,7 @@ expression: expression ADD expression {
         else if($3.is_variable)
         {
             // need to check the data of the variable
+            init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$, @1, @3, @$);
         }
         else
             init_arg_expression(QUAD_OP_DIV, &$1, &$3, &$$, @1, @3, @$);
