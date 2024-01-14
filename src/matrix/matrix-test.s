@@ -609,6 +609,8 @@ A_m: .word 3
 
 .text
 test_matrix:
+    addi $sp,$sp,-4 # Moving Stack pointer
+    sw $ra, 0($sp) # Save return address
 	# genere 3 matrices de taille 3x3 en assembleur mips
 	
 	
@@ -683,7 +685,8 @@ test_matrix:
 	print_str("\n A * B \n")
 	mult_mat(P,T,B,A_m,A_n,A_m)
 	print_mat(P,A_m,A_m)
-	
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
 	jr $ra
 
 .globl	main
