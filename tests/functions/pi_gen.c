@@ -35,7 +35,7 @@ float gen_pi(int iterations)
 }
 int main()
 {
-    int n = 3500;
+    const int n = 3500;
     float res = gen_pi(n);
     print(res);
     return 0;

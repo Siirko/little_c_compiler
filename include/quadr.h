@@ -74,6 +74,7 @@ typedef struct quadr_arg
         QUADR_ARG_GOTO,
         QUADR_ARG_RETURN_FUNCTION,
     } type;
+    bool is_const;
     // only used when
     // QUAD_TYPE_BINARY_ASSIGN|QUAD_TYPE_UNARY_ASSIGN|QUAD_TYPE_COPY
     scope_t scope;

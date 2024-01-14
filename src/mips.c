@@ -35,7 +35,8 @@ void mips_data_section(hashmap_t *t_sym_tab, FILE *file)
                     if (!hashmap_iter_has_next(&iter))
                         continue;
                     symbol_t *symbol = (symbol_t *)iter.node->value;
-                    if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR)
+                    if (symbol->type == TYPE_VARIABLE || symbol->type == TYPE_ITERATOR ||
+                        symbol->type == TYPE_CONST)
                     {
                         switch (symbol->data_type)
                         {

@@ -32,6 +32,8 @@ unary "++"|"--"
 "int"                       { strncpy(yylval.node_t.name, yytext, 1024); return INT; }
 "float"                     { strncpy(yylval.node_t.name, yytext, 1024); return FLOAT; }
 
+"const"                     { strncpy(yylval.node_t.name, yytext, 1024); return CONST; }
+
 "return"                    { strncpy(yylval.node_t.name, yytext, 1024); return RETURN; }
 "for"	                    { strncpy(yylval.node_t.name, yytext, 1024); return FOR; }
 "while"	                    { strncpy(yylval.node_t.name, yytext, 1024); return WHILE; }
