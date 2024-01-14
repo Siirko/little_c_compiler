@@ -1,9 +1,6 @@
-# Little C(MAT)/Mips compiler
+# Little C/Mips compiler
 
 Compiler made for university project.
-
-## Why C(MAT) ?
-Because normaly it should have matrix type but didn't had the time to implement it.
 
 ## Compilation
 
@@ -13,6 +10,10 @@ make
 
 Executable is present in `bin` folder with the name of `cmat`.
 
+## Why cmat ?
+Because normaly it should have matrix type but didn't had the time to implement it.
+
+## Execution
 The executable offers the option -h to display the help:
 
 ```
