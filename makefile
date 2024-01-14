@@ -33,7 +33,7 @@ $(SRC_PATH)/$(LEXICAL_FILE).c: $(SRC_PATH)/$(LEXICAL_FILE).l
 $(SRC_PATH)/$(BISON_FILE).c: $(SRC_PATH)/$(BISON_FILE).y
 	bison -d --debug $(SRC_PATH)/$(BISON_FILE).y -o $(SRC_PATH)/$(BISON_FILE).c
 
-.PHONY: clean
+	.PHONY: clean
 clean:
 	rm -fr $(OBJ_PATH)
 	rm -fr $(BIN_PATH)
